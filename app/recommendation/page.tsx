@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { forwardRef, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import { SOIL_TYPES, type SoilTypeId } from '@/lib/constants'
@@ -455,8 +455,6 @@ export default function RecommendationPage() {
 }
 
 // ── Result card ─────────────────────────────────────────────────────────────
-
-import { forwardRef } from 'react'
 
 const ResultCard = forwardRef<HTMLElement, { result: Recommendation; onReset: () => void }>(
   function ResultCard({ result, onReset }, ref) {

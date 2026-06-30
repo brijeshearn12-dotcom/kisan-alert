@@ -3,12 +3,12 @@
  * -----------------------------------------------------------------------------
  * Static crop-recommendation lookup for Kisan Alert (Maharashtra only).
  *
- * Maps every `SoilType × Season` combination to the crops most commonly and
+ * Maps every `SoilType x Season` combination to the crops most commonly and
  * profitably grown on that pairing, ordered from most to least common.
  *
  * Data source: curated from Indian agronomic best practices and the crops
  * actually cultivated across Maharashtra's agro-climatic zones. No invented
- * crops — every entry is a real, economically relevant Maharashtra crop.
+ * crops -- every entry is a real, economically relevant Maharashtra crop.
  * -----------------------------------------------------------------------------
  */
 
@@ -21,6 +21,7 @@
  * its literal shape is preserved for type inference.
  */
 export const cropLookup = {
+  // ── Kharif season (June–September) ─────────────────────────────────────────
   'sandy-kharif': [
     'Bajra (Pearl Millet)',
     'Groundnut',
@@ -28,14 +29,6 @@ export const cropLookup = {
     'Sesame (Til)',
     'Castor',
     'Cowpea',
-  ],
-  'sandy-rabi': [
-    'Onion',
-    'Wheat',
-    'Mustard',
-    'Watermelon',
-    'Muskmelon',
-    'Coriander',
   ],
   'loamy-kharif': [
     'Soybean',
@@ -46,14 +39,6 @@ export const cropLookup = {
     'Sugarcane',
     'Green Gram (Moong)',
   ],
-  'loamy-rabi': [
-    'Wheat',
-    'Chickpea (Gram)',
-    'Onion',
-    'Sorghum (Rabi Jowar)',
-    'Maize',
-    'Safflower',
-  ],
   'clayey-kharif': [
     'Rice (Paddy)',
     'Soybean',
@@ -61,13 +46,6 @@ export const cropLookup = {
     'Sugarcane',
     'Tur (Pigeon Pea)',
     'Sorghum (Jowar)',
-  ],
-  'clayey-rabi': [
-    'Wheat',
-    'Chickpea (Gram)',
-    'Sorghum (Rabi Jowar)',
-    'Safflower',
-    'Linseed',
   ],
   'black-cotton-kharif': [
     'Cotton',
@@ -77,6 +55,31 @@ export const cropLookup = {
     'Sugarcane',
     'Maize',
   ],
+
+  // ── Rabi season (October–March) ─────────────────────────────────────────────
+  'sandy-rabi': [
+    'Onion',
+    'Wheat',
+    'Mustard',
+    'Watermelon',
+    'Muskmelon',
+    'Coriander',
+  ],
+  'loamy-rabi': [
+    'Wheat',
+    'Chickpea (Gram)',
+    'Onion',
+    'Sorghum (Rabi Jowar)',
+    'Maize',
+    'Safflower',
+  ],
+  'clayey-rabi': [
+    'Wheat',
+    'Chickpea (Gram)',
+    'Sorghum (Rabi Jowar)',
+    'Safflower',
+    'Linseed',
+  ],
   'black-cotton-rabi': [
     'Sorghum (Rabi Jowar)',
     'Chickpea (Gram)',
@@ -85,9 +88,43 @@ export const cropLookup = {
     'Sunflower',
     'Linseed',
   ],
+
+  // ── Summer season (April–May): short-duration, heat-tolerant crops ──────────
+  'sandy-summer': [
+    'Watermelon',
+    'Muskmelon',
+    'Cucumber',
+    'Cowpea',
+    'Groundnut',
+    'Sesame (Til)',
+  ],
+  'loamy-summer': [
+    'Moong (Green Gram)',
+    'Maize',
+    'Sunflower',
+    'Cucumber',
+    'Bitter Gourd',
+    'Bottle Gourd',
+  ],
+  'clayey-summer': [
+    'Moong (Green Gram)',
+    'Urad (Black Gram)',
+    'Okra (Bhindi)',
+    'Bitter Gourd',
+    'Cucumber',
+    'Sorghum (Jowar)',
+  ],
+  'black-cotton-summer': [
+    'Moong (Green Gram)',
+    'Urad (Black Gram)',
+    'Sunflower',
+    'Sesame (Til)',
+    'Okra (Bhindi)',
+    'Watermelon',
+  ],
 } as const
 
-/** Union of every valid lookup key, derived from the data — never hand-maintained. */
+/** Union of every valid lookup key, derived from the data -- never hand-maintained. */
 export type CropLookupKey = keyof typeof cropLookup
 
 /** Shared empty result so the "miss" path allocates nothing on each call. */
@@ -111,9 +148,9 @@ const isCropLookupKey = (key: string): key is CropLookupKey =>
   Object.prototype.hasOwnProperty.call(cropLookup, key)
 
 /**
- * Return the viable crops for a `soilType × season` pairing.
+ * Return the viable crops for a `soilType x season` pairing.
  *
- * Input is normalized (trimmed, lowercased, whitespace/underscores → hyphen),
+ * Input is normalized (trimmed, lowercased, whitespace/underscores to hyphen),
  * so it tolerates the soil ids used elsewhere in the app (e.g. `black_cotton`)
  * as well as human-friendly labels (e.g. "Black Cotton").
  *

@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kisan Alert
+
+AI-powered crop advisory for Maharashtra smallholder farmers.
+
+## What it does
+
+Kisan Alert helps farmers select the right crop for their field by combining:
+
+- **Soil type selection** — Sandy, Loamy, Clayey, or Black Cotton
+- **Live 7-day weather forecast** from Open-Meteo (no API key required)
+- **Gemini AI reasoning** — constrained to agronomically viable crops for the current season
+- **Dry spell detection** — alerts farmers when weekly rainfall drops below 10 mm
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| Language | TypeScript (strict) |
+| Styling | Tailwind CSS v4 |
+| Auth + DB | Supabase (Postgres + RLS) |
+| AI | Google Gemini 2.0 Flash |
+| Weather | Open-Meteo API |
 
 ## Getting Started
 
-First, run the development server:
+1. Copy `.env.local.example` to `.env.local` and fill in your keys:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+GEMINI_API_KEY=...
+```
+
+2. Apply the database schema:
+
+```bash
+# In the Supabase SQL Editor, run:
+supabase/schema.sql
+```
+
+3. Run the dev server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) — you will be redirected to `/login`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Key Files
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+app/
+  api/recommendations/route.ts  # POST /api/recommendations
+  recommendation/page.tsx       # Main crop advisory UI
+  (auth)/login/page.tsx         # Auth (sign in + sign up)
+lib/
+  cropLookup.ts                 # Soil x Season => viable crops
+  gemini.ts                     # Gemini AI wrapper (never throws)
+  supabase.ts                   # Browser client
+  supabaseServer.ts             # Server client (Route Handlers)
+  constants.ts                  # SOIL_TYPES shared constant
+supabase/
+  schema.sql                    # Full DB schema + RLS policies
+```
 
-## Learn More
+## Recommendation Flow
 
-To learn more about Next.js, take a look at the following resources:
+```
+POST /api/recommendations
+  ├── Validate soil_type + district_id
+  ├── Authenticate via Supabase session cookie
+  ├── Look up district coordinates from DB
+  ├── Fetch Open-Meteo 7-day forecast
+  ├── Derive season (kharif / rabi / summer)
+  ├── getViableCrops(soil, season) → candidate list
+  ├── Ask Gemini to pick best crop + reasoning
+  ├── Persist to recommendations table (best-effort)
+  └── Return { crop_name, reasoning, confidence_score, is_dry_spell }
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Commands
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run dev     # development server
+npm run build   # production build
+npm run lint    # ESLint
+npx tsc --noEmit  # TypeScript check
+```

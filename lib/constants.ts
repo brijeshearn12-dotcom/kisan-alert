@@ -1,3 +1,4 @@
+
 export const SOIL_TYPES = [
   { id: 'sandy',        label: 'Sandy',        icon: '🏖️' },
   { id: 'loamy',        label: 'Loamy',        icon: '🌱' },

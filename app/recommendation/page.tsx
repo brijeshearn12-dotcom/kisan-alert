@@ -1,0 +1,658 @@
+'use client'
+
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase'
+import { SOIL_TYPES, type SoilTypeId } from '@/lib/constants'
+
+// ── Types ───────────────────────────────────────────────────────────────────
+
+interface District {
+  id: string
+  name: string
+}
+
+interface Recommendation {
+  crop_name: string
+  reasoning: string
+  confidence_score: number
+  is_dry_spell: boolean
+  /** Present when the AI service fell back to a safe default. */
+  error?: string
+}
+
+type InitState = 'loading' | 'ready' | 'unauthenticated' | 'error'
+
+// ── Soil presentation (copy + icons live here; ids/labels come from constants)─
+
+const stroke = {
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.6,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+}
+
+const SOIL_DETAILS: Record<SoilTypeId, { description: string; icon: ReactNode }> = {
+  sandy: {
+    description: 'Light, fast-draining soil that warms early in the season.',
+    icon: (
+      <svg viewBox="0 0 24 24" {...stroke} aria-hidden="true">
+        <path d="M3 16c2-2 3-2 4.5 0S11 18 12 16s2.5-2 4.5 0 2 2 4.5 0" />
+        <path d="M3 11c2-2 3-2 4.5 0S11 13 12 11s2.5-2 4.5 0 2 2 4.5 0" />
+      </svg>
+    ),
+  },
+  loamy: {
+    description: 'Balanced, fertile soil — ideal for most field crops.',
+    icon: (
+      <svg viewBox="0 0 24 24" {...stroke} aria-hidden="true">
+        <path d="M12 20v-7" />
+        <path d="M12 13c0-3 2-5 5-5 0 3-2 5-5 5Z" />
+        <path d="M12 15c0-2.5-1.8-4.5-4.5-4.5 0 2.7 2 4.5 4.5 4.5Z" />
+      </svg>
+    ),
+  },
+  clayey: {
+    description: 'Heavy, moisture-retentive soil that holds water well.',
+    icon: (
+      <svg viewBox="0 0 24 24" {...stroke} aria-hidden="true">
+        <path d="M4 8.5 12 5l8 3.5-8 3.5-8-3.5Z" />
+        <path d="m4 12 8 3.5L20 12" />
+        <path d="m4 15.5 8 3.5 8-3.5" />
+      </svg>
+    ),
+  },
+  black_cotton: {
+    description: 'Rich black soil with high clay content and good fertility.',
+    icon: (
+      <svg viewBox="0 0 24 24" {...stroke} aria-hidden="true">
+        <path d="M12 3v18" />
+        <path d="M12 8c1.5-1.4 3-1.4 4.5 0M12 8c-1.5-1.4-3-1.4-4.5 0" />
+        <path d="M12 13c1.5-1.4 3-1.4 4.5 0M12 13c-1.5-1.4-3-1.4-4.5 0" />
+      </svg>
+    ),
+  },
+}
+
+// ── Confidence badge styling ────────────────────────────────────────────────
+
+function confidenceStyle(score: number): {
+  label: string
+  dot: string
+  text: string
+  bg: string
+  ring: string
+  bar: string
+} {
+  if (score >= 0.8) {
+    return {
+      label: 'High confidence',
+      dot: 'bg-emerald-500',
+      text: 'text-emerald-700',
+      bg: 'bg-emerald-50',
+      ring: 'ring-emerald-600/20',
+      bar: 'bg-emerald-500',
+    }
+  }
+  if (score >= 0.6) {
+    return {
+      label: 'Moderate confidence',
+      dot: 'bg-amber-500',
+      text: 'text-amber-700',
+      bg: 'bg-amber-50',
+      ring: 'ring-amber-600/20',
+      bar: 'bg-amber-500',
+    }
+  }
+  return {
+    label: 'Low confidence',
+    dot: 'bg-rose-500',
+    text: 'text-rose-700',
+    bg: 'bg-rose-50',
+    ring: 'ring-rose-600/20',
+    bar: 'bg-rose-500',
+  }
+}
+
+// ── Small inline icons ──────────────────────────────────────────────────────
+
+const CheckIcon = (
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="m20 6-11 11-5-5" />
+  </svg>
+)
+
+const ChevronIcon = (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+)
+
+const WarningIcon = (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+    <path d="M12 9v4" />
+    <path d="M12 17h.01" />
+  </svg>
+)
+
+const DropIcon = (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 2.5 6.5 9a7 7 0 1 0 11 0L12 2.5Z" />
+  </svg>
+)
+
+const RefreshIcon = (
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <path d="M3 3v5h5" />
+  </svg>
+)
+
+const ArrowLeftIcon = (
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="m12 19-7-7 7-7" />
+    <path d="M19 12H5" />
+  </svg>
+)
+
+const LeafIcon = (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M11 20A7 7 0 0 1 14 6c3 0 6 3 6 6a7 7 0 0 1-5 6.7" />
+    <path d="M11 20a7 7 0 0 1-7-7c0-3 3-6 6-6 1.4 0 2.7.5 3.7 1.3" />
+    <path d="M11 20v-8" />
+  </svg>
+)
+
+// ── Page ────────────────────────────────────────────────────────────────────
+
+export default function RecommendationPage() {
+  const supabase = useMemo(() => createClient(), [])
+  const resultRef = useRef<HTMLElement>(null)
+
+  const [initState, setInitState] = useState<InitState>('loading')
+  const [districts, setDistricts] = useState<District[]>([])
+  const [districtId, setDistrictId] = useState('')
+  const [soil, setSoil] = useState<SoilTypeId | null>(null)
+
+  const [submitting, setSubmitting] = useState(false)
+  const [result, setResult] = useState<Recommendation | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
+
+  // Load the session + district options once on mount.
+  useEffect(() => {
+    let active = true
+
+    async function init() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!active) return
+      if (!user) {
+        setInitState('unauthenticated')
+        return
+      }
+
+      const [{ data: districtRows, error: districtError }, { data: profile }] = await Promise.all([
+        supabase.from('districts').select('id, name').order('name'),
+        supabase.from('users').select('district_id').eq('id', user.id).single(),
+      ])
+
+      if (!active) return
+      if (districtError || !districtRows || districtRows.length === 0) {
+        setInitState('error')
+        return
+      }
+
+      setDistricts(districtRows)
+      const preferred = profile?.district_id
+      setDistrictId(
+        preferred && districtRows.some((d) => d.id === preferred) ? preferred : districtRows[0].id,
+      )
+      setInitState('ready')
+    }
+
+    init()
+    return () => {
+      active = false
+    }
+  }, [supabase])
+
+  // Scroll result into view after it appears.
+  useEffect(() => {
+    if (result && resultRef.current) {
+      resultRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [result])
+
+  async function handleGenerate() {
+    if (!soil || !districtId || submitting) return
+
+    setSubmitting(true)
+    setFormError(null)
+    setResult(null)
+
+    try {
+      const res = await fetch('/api/recommendations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ district_id: districtId, soil_type: soil }),
+      })
+      const data: Recommendation & { error?: string } = await res.json()
+
+      if (!res.ok) {
+        setFormError(data?.error ?? 'We could not generate a recommendation. Please try again.')
+        return
+      }
+      setResult(data)
+    } catch {
+      setFormError('Network error. Check your connection and try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  function handleReset() {
+    setResult(null)
+    setFormError(null)
+    setSoil(null)
+  }
+
+  const canGenerate = initState === 'ready' && !!soil && !!districtId && !submitting
+
+  return (
+    <main className="min-h-screen bg-slate-50 font-sans" aria-busy={submitting}>
+      {/* Nav breadcrumb */}
+      <div className="border-b border-slate-100 bg-white">
+        <div className="mx-auto flex h-12 w-full max-w-2xl items-center gap-2 px-5 sm:px-6">
+          <Link
+            href="/login"
+            className="flex items-center gap-1.5 text-xs text-slate-400 transition-colors hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 rounded"
+          >
+            {ArrowLeftIcon}
+            <span>Back</span>
+          </Link>
+          <span className="text-slate-200" aria-hidden="true">/</span>
+          <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+            <span className="text-emerald-600">{LeafIcon}</span>
+            Crop Advisory
+          </span>
+        </div>
+      </div>
+
+      <div className="mx-auto w-full max-w-2xl px-5 py-10 sm:px-6 sm:py-14">
+        {/* Header */}
+        <header className="mb-9">
+          <h1 className="text-[22px] font-semibold tracking-tight text-slate-900 sm:text-2xl">
+            Find the right crop for your field
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-slate-500">
+            Select your soil type and district. We&apos;ll use live weather data and AI to
+            recommend the best crop for this season.
+          </p>
+        </header>
+
+        {initState === 'loading' && <InitSkeleton />}
+
+        {initState === 'unauthenticated' && (
+          <NoticeCard
+            title="Please sign in"
+            body="You need to be signed in to generate a crop recommendation."
+            action={
+              <Link
+                href="/login"
+                className="inline-flex h-9 items-center rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white transition-colors hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
+              >
+                Go to sign in
+              </Link>
+            }
+          />
+        )}
+
+        {initState === 'error' && (
+          <NoticeCard
+            title="Something went wrong"
+            body="We couldn't load your districts. Please refresh the page and try again."
+          />
+        )}
+
+        {initState === 'ready' && (
+          <>
+            {/* District */}
+            <section className="mb-6">
+              <label htmlFor="district" className="mb-1.5 block text-sm font-medium text-slate-700">
+                District
+              </label>
+              <div className="relative">
+                <select
+                  id="district"
+                  value={districtId}
+                  onChange={(e) => setDistrictId(e.target.value)}
+                  className="w-full appearance-none rounded-lg border border-slate-200 bg-white py-2.5 pl-3.5 pr-10 text-sm text-slate-900 shadow-sm transition-colors hover:border-slate-300 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10"
+                >
+                  {districts.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  {ChevronIcon}
+                </span>
+              </div>
+            </section>
+
+            {/* Soil selection */}
+            <section className="mb-7">
+              <fieldset>
+                <legend className="mb-2.5 text-sm font-medium text-slate-700">Soil type</legend>
+                <div role="radiogroup" aria-label="Soil type" className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  {SOIL_TYPES.map((option) => {
+                    const selected = soil === option.id
+                    const detail = SOIL_DETAILS[option.id]
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() => setSoil(option.id)}
+                        className={[
+                          'group relative flex items-start gap-3 rounded-xl border p-4 text-left transition-all duration-200',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:ring-offset-1',
+                          selected
+                            ? 'border-emerald-500 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-500/10'
+                            : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50',
+                        ].join(' ')}
+                      >
+                        <span
+                          className={[
+                            'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors',
+                            selected
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-slate-100 text-slate-500 group-hover:text-slate-600',
+                          ].join(' ')}
+                        >
+                          <span className="h-5 w-5">{detail.icon}</span>
+                        </span>
+
+                        <span className="min-w-0 flex-1 pt-0.5">
+                          <span className="block text-sm font-medium text-slate-900">
+                            {option.label}
+                          </span>
+                          <span className="mt-0.5 block text-xs leading-relaxed text-slate-500">
+                            {detail.description}
+                          </span>
+                        </span>
+
+                        <span
+                          className={[
+                            'absolute right-3 top-3 flex h-4 w-4 items-center justify-center rounded-full text-white transition-all duration-200',
+                            selected ? 'scale-100 bg-emerald-600 opacity-100' : 'scale-75 opacity-0',
+                          ].join(' ')}
+                          aria-hidden="true"
+                        >
+                          {CheckIcon}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </fieldset>
+            </section>
+
+            {/* Generate */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={!canGenerate}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+              >
+                {submitting ? (
+                  <>
+                    <LoadingDots />
+                    <span>Analysing your field…</span>
+                  </>
+                ) : (
+                  'Generate recommendation'
+                )}
+              </button>
+
+              {!soil && (
+                <p className="text-center text-xs text-slate-400">
+                  Select a soil type above to continue
+                </p>
+              )}
+            </div>
+
+            {/* Error */}
+            {formError && (
+              <div
+                role="alert"
+                aria-live="assertive"
+                className="mt-5 flex items-start gap-2.5 rounded-xl border border-rose-100 bg-rose-50/60 p-3.5 text-sm text-rose-700"
+              >
+                <span className="mt-0.5 shrink-0 text-rose-500">{WarningIcon}</span>
+                <p className="leading-relaxed">{formError}</p>
+              </div>
+            )}
+
+            {/* Loading skeleton */}
+            {submitting && <ResultSkeleton />}
+
+            {/* Result */}
+            {!submitting && result && (
+              <ResultCard ref={resultRef} result={result} onReset={handleReset} />
+            )}
+          </>
+        )}
+      </div>
+    </main>
+  )
+}
+
+// ── Result card ─────────────────────────────────────────────────────────────
+
+import { forwardRef } from 'react'
+
+const ResultCard = forwardRef<HTMLElement, { result: Recommendation; onReset: () => void }>(
+  function ResultCard({ result, onReset }, ref) {
+    const confidence = confidenceStyle(result.confidence_score)
+    const percent = Math.round(result.confidence_score * 100)
+
+    return (
+      <section
+        ref={ref}
+        aria-live="polite"
+        aria-label="Recommendation result"
+        className="mt-6 animate-fade-in-up overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+      >
+        <div className="p-6 sm:p-7">
+          {/* Crop name + badge */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">
+                Recommended crop
+              </p>
+              <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-900">
+                {result.crop_name}
+              </h2>
+            </div>
+            <span
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${confidence.bg} ${confidence.text} ${confidence.ring}`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${confidence.dot}`} />
+              {percent}%
+            </span>
+          </div>
+
+          {/* Confidence bar */}
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[11px] font-medium text-slate-400 uppercase tracking-[0.07em]">Confidence</span>
+              <span className={`text-[11px] font-semibold ${confidence.text}`}>{confidence.label}</span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-slate-100" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label={`Confidence: ${percent}%`}>
+              <div
+                className={`h-full rounded-full transition-all duration-700 ${confidence.bar}`}
+                style={{ width: `${percent}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Reasoning */}
+          <div className="mt-5 border-t border-slate-100 pt-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">Why this crop</p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">{result.reasoning}</p>
+          </div>
+
+          {/* Weather signal */}
+          <div className="mt-5">
+            {result.is_dry_spell ? (
+              <div className="flex items-start gap-2.5 rounded-xl border border-amber-100 bg-amber-50/60 p-3.5">
+                <span className="mt-0.5 shrink-0 text-amber-500">{WarningIcon}</span>
+                <div>
+                  <p className="text-sm font-medium text-amber-800">Dry spell expected</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-amber-700">
+                    Low rainfall forecast this week. Plan irrigation accordingly.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start gap-2.5 rounded-xl border border-slate-100 bg-slate-50 p-3.5">
+                <span className="mt-0.5 shrink-0 text-emerald-500">{DropIcon}</span>
+                <div>
+                  <p className="text-sm font-medium text-slate-700">Adequate rainfall expected</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+                    No dry spell forecast for the coming week.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {result.error && (
+            <p className="mt-4 text-xs leading-relaxed text-slate-400">
+              Showing a safe fallback recommendation while the AI service is unavailable.
+            </p>
+          )}
+        </div>
+
+        {/* Footer action */}
+        <div className="border-t border-slate-100 px-6 py-3.5 sm:px-7">
+          <button
+            type="button"
+            onClick={onReset}
+            className="flex items-center gap-1.5 text-xs font-medium text-slate-500 transition-colors hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 rounded"
+          >
+            {RefreshIcon}
+            Try a different soil type
+          </button>
+        </div>
+      </section>
+    )
+  },
+)
+
+// ── Loading skeleton (mirrors the result card) ──────────────────────────────
+
+function ResultSkeleton() {
+  return (
+    <section
+      aria-hidden="true"
+      className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+    >
+      <div className="animate-pulse p-6 sm:p-7">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2.5">
+            <div className="h-2 w-28 rounded bg-slate-100" />
+            <div className="h-7 w-44 rounded-md bg-slate-200" />
+          </div>
+          <div className="h-6 w-20 rounded-full bg-slate-100" />
+        </div>
+        {/* Confidence bar skeleton */}
+        <div className="mt-4 space-y-1.5">
+          <div className="flex justify-between">
+            <div className="h-2 w-20 rounded bg-slate-100" />
+            <div className="h-2 w-24 rounded bg-slate-100" />
+          </div>
+          <div className="h-1.5 w-full rounded-full bg-slate-100" />
+        </div>
+        {/* Reasoning skeleton */}
+        <div className="mt-5 space-y-2.5 border-t border-slate-100 pt-5">
+          <div className="h-2 w-24 rounded bg-slate-100" />
+          <div className="h-3.5 w-full rounded bg-slate-100" />
+          <div className="h-3.5 w-11/12 rounded bg-slate-100" />
+          <div className="h-3.5 w-4/5 rounded bg-slate-100" />
+        </div>
+        {/* Weather signal skeleton */}
+        <div className="mt-5 h-16 w-full rounded-xl bg-slate-100" />
+      </div>
+      <div className="border-t border-slate-100 px-6 py-3.5 sm:px-7">
+        <div className="h-3.5 w-36 rounded bg-slate-100" />
+      </div>
+    </section>
+  )
+}
+
+// ── Page init skeleton ──────────────────────────────────────────────────────
+
+function InitSkeleton() {
+  return (
+    <div className="animate-pulse space-y-6" aria-hidden="true">
+      {/* District skeleton */}
+      <div className="space-y-1.5">
+        <div className="h-3.5 w-16 rounded bg-slate-200" />
+        <div className="h-10 w-full rounded-lg bg-slate-200" />
+      </div>
+      {/* Soil grid skeleton */}
+      <div className="space-y-2.5">
+        <div className="h-3.5 w-20 rounded bg-slate-200" />
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-20 rounded-xl bg-slate-200" />
+          ))}
+        </div>
+      </div>
+      {/* Button skeleton */}
+      <div className="h-11 w-full rounded-lg bg-slate-200" />
+    </div>
+  )
+}
+
+// ── Small building blocks ───────────────────────────────────────────────────
+
+function NoticeCard({
+  title,
+  body,
+  action,
+}: {
+  title: string
+  body: string
+  action?: ReactNode
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+      <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{body}</p>
+      {action && <div className="mt-4">{action}</div>}
+    </div>
+  )
+}
+
+function LoadingDots() {
+  return (
+    <span className="flex items-center gap-1" aria-hidden="true">
+      {[0, 150, 300].map((delay) => (
+        <span
+          key={delay}
+          className="h-1.5 w-1.5 animate-bounce rounded-full bg-white/90"
+          style={{ animationDelay: `${delay}ms` }}
+        />
+      ))}
+    </span>
+  )
+}

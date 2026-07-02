@@ -500,6 +500,12 @@ export function QuickActions({ isExpert }: { isExpert: boolean }) {
       description: 'Diagnose a crop disease from a photo.',
       icon: ScanPath,
     },
+    {
+      href: '/history',
+      title: 'Activity History',
+      description: 'View your recommendation and diagnosis logs.',
+      icon: ClockPath,
+    },
   ]
 
   if (isExpert) {
@@ -519,7 +525,7 @@ export function QuickActions({ isExpert }: { isExpert: boolean }) {
       </h2>
       <div
         className={`grid grid-cols-1 gap-3 ${
-          actions.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
+          actions.length >= 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
         }`}
       >
         {actions.map((action) => (

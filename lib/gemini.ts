@@ -26,10 +26,10 @@ export interface WeatherSummary {
   isDrySpell: boolean
 }
 
-const MODEL_NAME = 'gemini-2.0-flash'
+const MODEL_NAME = 'gemini-3.1-flash-lite'
 
 /** How long we wait for Gemini before giving up and using the fallback. */
-const REQUEST_TIMEOUT_MS = 15_000
+const REQUEST_TIMEOUT_MS = 35_000
 
 const SYSTEM_INSTRUCTION =
   'You are an agricultural advisor for Indian smallholder farmers.'
@@ -146,7 +146,7 @@ export async function getCropRecommendation(
     return buildFallback(viableCrops, 'No viable crops were supplied.')
   }
 
-  const apiKey = process.env.GEMINI_API_KEY
+  const apiKey = process.env.GEMINI_API_KEY?.trim()
   if (!apiKey) {
     return buildFallback(viableCrops, 'GEMINI_API_KEY is not configured.')
   }
@@ -206,5 +206,206 @@ export async function getCropRecommendation(
     const message =
       error instanceof Error ? error.message : 'Unknown Gemini error.'
     return buildFallback(viableCrops, message)
+  }
+}
+
+// ── Disease diagnosis ────────────────────────────────────────────────────────
+
+/** Shape returned to callers. `error` is only present on the fallback path. */
+export interface DiseaseDiagnosis {
+  diagnosis: string | null
+  confidence_score: number
+  treatment_advice: string | null
+  error?: string
+}
+
+/** Every failure path returns exactly this object (per the API contract). */
+const DIAGNOSIS_FALLBACK: DiseaseDiagnosis = {
+  diagnosis: null,
+  confidence_score: 0,
+  treatment_advice: null,
+  error: 'ai_unavailable',
+}
+
+const DISEASE_SYSTEM_INSTRUCTION =
+  'You are an experienced plant pathologist specializing in common diseases affecting Indian crops. ' +
+  'You assist smallholder farmers. ' +
+  'Carefully inspect the supplied image before answering. ' +
+  'If the image quality is poor, blurry, dark, partially visible, or multiple conditions are possible, lower your confidence accordingly. ' +
+  'Never pretend to be certain when you are not.'
+
+/** Inline image payload Gemini Vision accepts as a content part. */
+interface InlineImage {
+  data: string
+  mimeType: string
+}
+
+/**
+ * Download an image and return it as base64 inline data for Gemini Vision.
+ * Returns null on any download/validation problem (bad URL, non-image, HTTP
+ * error, timeout) so the caller can fall back without throwing.
+ */
+async function fetchImageAsInlineData(imageUrl: string): Promise<InlineImage | null> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  try {
+    const response = await fetch(imageUrl, { signal: controller.signal })
+    if (!response.ok) {
+      console.error(`Image download failed. HTTP Status: ${response.status} for URL: ${imageUrl}`)
+      return null
+    }
+
+    const mimeType = response.headers.get('content-type')?.split(';')[0].trim()
+    if (!mimeType || !mimeType.startsWith('image/')) {
+      console.error(`Invalid or missing MIME type: ${mimeType} for URL: ${imageUrl}`)
+      return null
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer())
+    if (buffer.length === 0) {
+      console.error(`Downloaded image buffer is empty for URL: ${imageUrl}`)
+      return null
+    }
+
+    return { data: buffer.toString('base64'), mimeType }
+  } catch (err) {
+    console.error(`Error downloading image from URL: ${imageUrl}:`, err)
+    return null
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+/** Build the diagnosis prompt, embedding the crop hint and the strict rules. */
+function buildDiagnosisPrompt(cropType?: string): string {
+  const cropLine =
+    cropType && cropType.trim() !== ''
+      ? `The crop in the image is: ${cropType.trim()}.`
+      : 'The crop type is not specified; infer it from the image if possible.'
+
+  return [
+    cropLine,
+    '',
+    'Self-report a confidence score between 0 and 1.',
+    'Score CONSERVATIVELY.',
+    'Reduce your confidence if:',
+    '- the image is blurry',
+    '- lighting is poor',
+    '- symptoms are incomplete',
+    '- multiple diseases are plausible',
+    '- you cannot confidently distinguish between conditions.',
+    '',
+    'Respond with ONLY valid JSON (no markdown, no code fences, no commentary) in exactly this shape:',
+    '{"diagnosis": "<disease name or condition>", "confidence_score": <number between 0 and 1>, "treatment_advice": "<2-3 simple sentences using practical, locally available remedies>"}',
+  ].join('\n')
+}
+
+/**
+ * Validate and normalize the model's parsed output.
+ * Returns a clean diagnosis, or null if the payload is unusable.
+ */
+function normalizeDiagnosisOutput(parsed: unknown): DiseaseDiagnosis | null {
+  if (typeof parsed !== 'object' || parsed === null) return null
+
+  const record = parsed as Record<string, unknown>
+  const rawDiagnosis = record.diagnosis
+  const rawTreatment = record.treatment_advice
+  const rawScore = record.confidence_score
+
+  if (typeof rawDiagnosis !== 'string' || rawDiagnosis.trim() === '') return null
+  if (typeof rawTreatment !== 'string' || rawTreatment.trim() === '') return null
+
+  // Coerce + clamp the score into [0, 1]; default to a conservative 0.5.
+  const numericScore =
+    typeof rawScore === 'number' && Number.isFinite(rawScore) ? rawScore : 0.5
+  const confidence_score = Math.min(1, Math.max(0, numericScore))
+
+  return {
+    diagnosis: rawDiagnosis.trim(),
+    confidence_score,
+    treatment_advice: rawTreatment.trim(),
+  }
+}
+
+/**
+ * Diagnose a plant disease from an image URL using Gemini Vision.
+ *
+ * Always resolves — never throws. On any failure (invalid URL, download error,
+ * missing key, Gemini error, malformed JSON, timeout) it returns
+ * {@link DIAGNOSIS_FALLBACK} with `error: "ai_unavailable"`.
+ */
+export async function getDiseaseDiagnosis(
+  imageUrl: string,
+  cropType?: string,
+): Promise<DiseaseDiagnosis> {
+  const apiKey = process.env.GEMINI_API_KEY?.trim()
+  if (!apiKey) return DIAGNOSIS_FALLBACK
+  console.log(`apiKey loaded: length=${apiKey.length}, startsWith=${apiKey.slice(0, 10)}`)
+
+  try {
+    const image = await fetchImageAsInlineData(imageUrl)
+    if (!image) return DIAGNOSIS_FALLBACK
+
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({
+      model: MODEL_NAME,
+      systemInstruction: DISEASE_SYSTEM_INSTRUCTION,
+      generationConfig: {
+        responseMimeType: 'application/json',
+        temperature: 0.3,
+      },
+    })
+
+    let text = ''
+    let lastErr: unknown
+    let delayMs = 1500
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const result = await Promise.race([
+          model.generateContent([
+            buildDiagnosisPrompt(cropType),
+            { inlineData: { data: image.data, mimeType: image.mimeType } },
+          ]),
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error('Gemini request timed out.')),
+              REQUEST_TIMEOUT_MS,
+            ),
+          ),
+        ])
+        text = result.response.text()
+        break
+      } catch (err) {
+        lastErr = err
+        if (attempt < 3) {
+          console.warn(`Gemini API call failed on attempt ${attempt}. Retrying in ${delayMs}ms... Error:`, err)
+          await new Promise((resolve) => setTimeout(resolve, delayMs))
+          delayMs *= 2
+        }
+      }
+    }
+
+    if (!text) {
+      console.error('All Gemini API call attempts failed. Returning fallback. Last error:', lastErr)
+      return DIAGNOSIS_FALLBACK
+    }
+
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(stripCodeFences(text))
+    } catch (parseErr) {
+      console.error('JSON Parse error of Gemini response:', parseErr, 'Raw Text:', text)
+      return DIAGNOSIS_FALLBACK
+    }
+
+    const normalized = normalizeDiagnosisOutput(parsed)
+    if (!normalized) {
+      console.error('Normalization failed for parsed output:', parsed)
+      return DIAGNOSIS_FALLBACK
+    }
+    return normalized
+  } catch (err) {
+    console.error('Gemini SDK error in getDiseaseDiagnosis:', err)
+    return DIAGNOSIS_FALLBACK
   }
 }

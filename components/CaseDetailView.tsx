@@ -47,14 +47,14 @@ const ArrowLeftIcon = (
 )
 
 const CheckCircleIcon = (
-  <svg viewBox="0 0 24 24" width="16" height="16" {...stroke} className="text-emerald-600">
+  <svg viewBox="0 0 24 24" width="16" height="16" {...stroke} className="text-primary-green">
     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
     <polyline points="22 4 12 14.01 9 11.01" />
   </svg>
 )
 
 const ClockIcon = (
-  <svg viewBox="0 0 24 24" width="16" height="16" {...stroke} className="text-amber-600">
+  <svg viewBox="0 0 24 24" width="16" height="16" {...stroke} className="text-accent-amber">
     <circle cx="12" cy="12" r="10" />
     <polyline points="12 6 12 12 16 14" />
   </svg>
@@ -118,7 +118,7 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
       {/* Back link */}
       <Link
         href="/expert"
-        className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 rounded px-1 py-0.5"
+        className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 rounded px-1 py-0.5"
       >
         {ArrowLeftIcon}
         <span>Back to Escalated Cases</span>
@@ -156,8 +156,8 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
               <div className="absolute right-3 top-3">
                 <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm backdrop-blur-md ${
                   isPending
-                    ? 'bg-amber-500/10 text-amber-700 ring-1 ring-amber-500/20'
-                    : 'bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20'
+                    ? 'bg-accent-amber/10 text-accent-amber ring-1 ring-accent-amber/20'
+                    : 'bg-primary-green/10 text-primary-green ring-1 ring-primary-green/20'
                 }`}>
                   {isPending ? ClockIcon : CheckCircleIcon}
                   <span>{isPending ? 'Pending' : 'Resolved'}</span>
@@ -166,7 +166,7 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
             </div>
 
             {/* Analysis details */}
-            <div className="p-6 sm:p-8">
+            <div className="p-5 sm:p-6">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Automated Scan Diagnosis</span>
               <h2 className="text-xl font-bold text-slate-900 mt-1">
                 {check?.diagnosis || 'Unknown Diagnosis'}
@@ -198,7 +198,7 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
 
         {/* Right column: Action form */}
         <div className="space-y-6">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
             <h3 className="text-base font-bold text-slate-900">Expert Action Panel</h3>
             <p className="mt-1.5 text-xs text-slate-500">
               Provide feedback and mark this case as verified or resolved. Farmers will see your notes immediately on their dashboard.
@@ -216,7 +216,7 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
                   onChange={(e) => setNotes(e.target.value)}
                   disabled={!isPending || submitting}
                   placeholder="Enter specific diagnosis verification notes, custom treatment advice, or chemical/biological countermeasures for the farmer."
-                  className="w-full rounded-lg border border-slate-200 p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/20 disabled:bg-slate-50 disabled:text-slate-500"
+                  className="w-full rounded-lg border border-slate-200 p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary-green focus:outline-none focus:ring-1 focus:ring-primary-green/20 disabled:bg-slate-50 disabled:text-slate-500"
                 />
               </div>
 
@@ -231,13 +231,13 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
                   type="button"
                   onClick={handleResolve}
                   disabled={submitting}
-                  className="flex w-full h-10 items-center justify-center rounded-xl bg-emerald-600 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 disabled:bg-slate-200 disabled:text-slate-400"
+                  className="flex w-full h-10 items-center justify-center rounded-xl bg-primary-green text-sm font-semibold text-white shadow-sm hover:bg-primary-green/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 disabled:bg-slate-200 disabled:text-slate-400"
                 >
                   {submitting ? 'Resolving Case...' : 'Verify & Resolve'}
                 </button>
               ) : (
                 <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 text-center">
-                  <div className="mx-auto block text-emerald-600 w-fit">{CheckCircleIcon}</div>
+                  <div className="mx-auto block text-primary-green w-fit">{CheckCircleIcon}</div>
                   <h4 className="mt-2 text-sm font-bold text-slate-950">Resolved</h4>
                   {caseRecord.resolved_at && (
                     <p className="text-[11px] text-slate-400 mt-0.5">

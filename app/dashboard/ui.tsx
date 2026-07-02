@@ -12,6 +12,7 @@
 import { type ReactNode } from 'react'
 import Link from 'next/link'
 import { confidenceStyle } from '@/lib/confidence'
+import { EntranceAnimation } from '@/components/EntranceAnimation'
 
 // ── Types (mirror GET /api/dashboard) ───────────────────────────────────────
 
@@ -195,9 +196,9 @@ export function TopNav({
       >
         <Link
           href="/dashboard"
-          className="flex items-center gap-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
+          className="flex items-center gap-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-green text-white">
             <Icon size={16}>{LeafPath}</Icon>
           </span>
           <span className="text-sm font-semibold tracking-tight text-slate-900">Kisan Alert</span>
@@ -223,7 +224,7 @@ export function TopNav({
               type="button"
               onClick={onSignOut}
               disabled={signingOut}
-              className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 disabled:opacity-60"
+              className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 disabled:opacity-60"
             >
               <Icon size={14}>{LogoutPath}</Icon>
               <span className="hidden sm:inline">{signingOut ? 'Signing out…' : 'Sign out'}</span>
@@ -241,8 +242,8 @@ export function WelcomeHeader({ name, district }: { name: string | null; distric
   const greeting = greetingFor(new Date())
 
   return (
-    <header className="animate-fade-in-up">
-      <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-[28px]">
+    <header>
+      <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
         {greeting}
         {name ? <span>, {name}</span> : null}
       </h1>
@@ -265,11 +266,11 @@ export function WeatherCard({
   fetchedAt: Date | null
 }) {
   return (
-    <section
-      aria-label="Weather"
-      className="animate-fade-in-up overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
-      style={{ animationDelay: '40ms' }}
-    >
+    <EntranceAnimation>
+      <section
+        aria-label="Weather"
+        className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+      >
       <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3 sm:px-6">
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">
           Local weather
@@ -323,7 +324,7 @@ export function WeatherCard({
                     </span>
                     <span
                       className={`text-[10px] tabular-nums ${
-                        day.precipitation >= 1 ? 'text-emerald-600' : 'text-slate-300'
+                        day.precipitation >= 1 ? 'text-primary-green' : 'text-slate-300'
                       }`}
                     >
                       {day.precipitation >= 1 ? `${Math.round(day.precipitation)}mm` : '—'}
@@ -348,7 +349,8 @@ export function WeatherCard({
           </div>
         </div>
       )}
-    </section>
+      </section>
+    </EntranceAnimation>
   )
 }
 
@@ -368,18 +370,19 @@ function Stat({ icon, label, value }: { icon: ReactNode; label: string; value: s
 
 export function DrySpellBanner() {
   return (
-    <section
-      role="alert"
-      aria-label="Dry spell warning"
-      className="animate-fade-in-up flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50/70 p-5 sm:flex-row sm:items-center sm:justify-between"
-    >
+    <EntranceAnimation>
+      <section
+        role="alert"
+        aria-label="Dry spell warning"
+        className="flex flex-col gap-3 rounded-2xl border border-accent-amber/20 bg-accent-amber/5 p-5 sm:flex-row sm:items-center sm:justify-between"
+      >
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 shrink-0 text-amber-500">
+        <span className="mt-0.5 shrink-0 text-accent-amber">
           <Icon size={18}>{WarningPath}</Icon>
         </span>
         <div>
-          <p className="text-sm font-semibold text-amber-900">Dry spell expected</p>
-          <p className="mt-0.5 text-xs leading-relaxed text-amber-700">
+          <p className="text-sm font-semibold text-slate-900">Dry spell expected</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-slate-600">
             No meaningful rain is forecast for the next several days. Choose a crop that suits low
             rainfall and plan your irrigation early.
           </p>
@@ -387,12 +390,13 @@ export function DrySpellBanner() {
       </div>
       <Link
         href="/recommendation"
-        className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-amber-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-1"
+        className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-accent-amber px-4 text-xs font-semibold text-white transition-colors hover:bg-accent-amber/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-amber/50 focus-visible:ring-offset-1"
       >
         View recommendations
         <Icon size={14}>{ArrowRightPath}</Icon>
       </Link>
-    </section>
+      </section>
+    </EntranceAnimation>
   )
 }
 
@@ -401,12 +405,12 @@ export function DrySpellBanner() {
 export function RecommendationCard({ recommendation }: { recommendation: Recommendation | null }) {
   if (!recommendation || !recommendation.crop_name) {
     return (
-      <section
-        aria-label="Latest recommendation"
-        className="animate-fade-in-up rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center sm:p-8"
-        style={{ animationDelay: '80ms' }}
-      >
-        <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+      <EntranceAnimation>
+        <section
+          aria-label="Latest recommendation"
+          className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center sm:p-8"
+        >
+        <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-primary-green/5 text-primary-green">
           <Icon size={20}>{SproutPath}</Icon>
         </span>
         <h2 className="mt-3 text-base font-semibold text-slate-900">Get your first recommendation</h2>
@@ -416,12 +420,13 @@ export function RecommendationCard({ recommendation }: { recommendation: Recomme
         </p>
         <Link
           href="/recommendation"
-          className="mt-4 inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:ring-offset-2"
+          className="mt-4 inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-primary-green px-5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-green/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 focus-visible:ring-offset-2"
         >
           Get a recommendation
           <Icon size={15}>{ArrowRightPath}</Icon>
         </Link>
-      </section>
+        </section>
+      </EntranceAnimation>
     )
   }
 
@@ -430,11 +435,11 @@ export function RecommendationCard({ recommendation }: { recommendation: Recomme
   const percent = Math.round(score * 100)
 
   return (
-    <section
-      aria-label="Latest recommendation"
-      className="animate-fade-in-up overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
-      style={{ animationDelay: '80ms' }}
-    >
+    <EntranceAnimation>
+      <section
+        aria-label="Latest recommendation"
+        className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+      >
       <div className="p-5 sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -465,13 +470,14 @@ export function RecommendationCard({ recommendation }: { recommendation: Recomme
         </span>
         <Link
           href="/recommendation"
-          className="flex items-center gap-1 rounded text-xs font-medium text-emerald-700 transition-colors hover:text-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
+          className="flex items-center gap-1 rounded text-xs font-medium text-primary-green transition-colors hover:text-primary-green/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
         >
           New recommendation
           <Icon size={13}>{ArrowRightPath}</Icon>
         </Link>
       </div>
-    </section>
+      </section>
+    </EntranceAnimation>
   )
 }
 
@@ -510,7 +516,8 @@ export function QuickActions({ isExpert }: { isExpert: boolean }) {
   }
 
   return (
-    <section aria-label="Quick actions" className="animate-fade-in-up" style={{ animationDelay: '120ms' }}>
+    <EntranceAnimation>
+      <section aria-label="Quick actions">
       <h2 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">
         Quick actions
       </h2>
@@ -523,15 +530,15 @@ export function QuickActions({ isExpert }: { isExpert: boolean }) {
           <Link
             key={action.href}
             href={action.href}
-            className="group flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-200 hover:border-emerald-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:ring-offset-1"
+            className="group flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-200 hover:border-primary-green/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 focus-visible:ring-offset-1"
           >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 transition-colors group-hover:bg-emerald-100">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-green/5 text-primary-green transition-colors group-hover:bg-primary-green/10">
               <Icon size={19}>{action.icon}</Icon>
             </span>
             <span className="min-w-0 flex-1">
               <span className="flex items-center justify-between gap-2">
                 <span className="text-sm font-semibold text-slate-900">{action.title}</span>
-                <span className="text-slate-300 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-emerald-500">
+                <span className="text-slate-300 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-primary-green">
                   <Icon size={15}>{ArrowRightPath}</Icon>
                 </span>
               </span>
@@ -542,7 +549,8 @@ export function QuickActions({ isExpert }: { isExpert: boolean }) {
           </Link>
         ))}
       </div>
-    </section>
+      </section>
+    </EntranceAnimation>
   )
 }
 
@@ -553,7 +561,7 @@ export function SiteFooter() {
     <footer className="mt-auto border-t border-slate-100 bg-white">
       <div className="mx-auto flex w-full max-w-4xl flex-col items-center justify-between gap-2 px-5 py-5 text-xs text-slate-400 sm:flex-row sm:px-6">
         <span className="flex items-center gap-1.5">
-          <span className="text-emerald-600">
+          <span className="text-primary-green">
             <Icon size={14}>{LeafPath}</Icon>
           </span>
           Kisan Alert
@@ -625,10 +633,11 @@ export function DashboardSkeleton() {
 
 export function ErrorCard({ onRetry }: { onRetry: () => void }) {
   return (
-    <div
-      role="alert"
-      className="animate-fade-in-up rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
-    >
+    <EntranceAnimation>
+      <div
+        role="alert"
+        className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
+      >
       <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-rose-50 text-rose-500">
         <Icon size={20}>{WarningPath}</Icon>
       </span>
@@ -644,6 +653,7 @@ export function ErrorCard({ onRetry }: { onRetry: () => void }) {
         <Icon size={15}>{RefreshPath}</Icon>
         Try again
       </button>
-    </div>
+      </div>
+    </EntranceAnimation>
   )
 }

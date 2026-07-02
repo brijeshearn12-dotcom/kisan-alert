@@ -21,21 +21,21 @@ export function confidenceStyle(score: number): ConfidenceStyle {
   if (score >= 0.8) {
     return {
       label: 'High confidence',
-      dot: 'bg-emerald-500',
-      text: 'text-emerald-700',
-      bg: 'bg-emerald-50',
-      ring: 'ring-emerald-600/20',
-      bar: 'bg-emerald-500',
+      dot: 'bg-primary-green',
+      text: 'text-primary-green',
+      bg: 'bg-primary-green/5',
+      ring: 'ring-primary-green/20',
+      bar: 'bg-primary-green',
     }
   }
   if (score >= 0.6) {
     return {
       label: 'Moderate confidence',
-      dot: 'bg-amber-500',
-      text: 'text-amber-700',
-      bg: 'bg-amber-50',
-      ring: 'ring-amber-600/20',
-      bar: 'bg-amber-500',
+      dot: 'bg-accent-amber',
+      text: 'text-accent-amber',
+      bg: 'bg-accent-amber/5',
+      ring: 'ring-accent-amber/20',
+      bar: 'bg-accent-amber',
     }
   }
   return {

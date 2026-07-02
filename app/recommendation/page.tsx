@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import { SOIL_TYPES, type SoilTypeId } from '@/lib/constants'
 import { confidenceStyle } from '@/lib/confidence'
+import { EntranceAnimation } from '@/components/EntranceAnimation'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -230,14 +231,14 @@ export default function RecommendationPage() {
         <div className="mx-auto flex h-12 w-full max-w-2xl items-center gap-2 px-5 sm:px-6">
           <Link
             href="/login"
-            className="flex items-center gap-1.5 text-xs text-slate-400 transition-colors hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 rounded"
+            className="flex items-center gap-1.5 text-xs text-slate-400 transition-colors hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 rounded"
           >
             {ArrowLeftIcon}
             <span>Back</span>
           </Link>
           <span className="text-slate-200" aria-hidden="true">/</span>
           <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-            <span className="text-emerald-600">{LeafIcon}</span>
+            <span className="text-primary-green">{LeafIcon}</span>
             Crop Advisory
           </span>
         </div>
@@ -264,7 +265,7 @@ export default function RecommendationPage() {
             action={
               <Link
                 href="/login"
-                className="inline-flex h-9 items-center rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white transition-colors hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
+                className="inline-flex h-9 items-center rounded-lg bg-primary-green px-4 text-sm font-medium text-white transition-colors hover:bg-primary-green/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
               >
                 Go to sign in
               </Link>
@@ -291,7 +292,7 @@ export default function RecommendationPage() {
                   id="district"
                   value={districtId}
                   onChange={(e) => setDistrictId(e.target.value)}
-                  className="w-full appearance-none rounded-lg border border-slate-200 bg-white py-2.5 pl-3.5 pr-10 text-sm text-slate-900 shadow-sm transition-colors hover:border-slate-300 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10"
+                  className="w-full appearance-none rounded-lg border border-slate-200 bg-white py-2.5 pl-3.5 pr-10 text-sm text-slate-900 shadow-sm transition-colors hover:border-slate-300 focus:border-primary-green focus:outline-none focus:ring-4 focus:ring-primary-green/10"
                 >
                   {districts.map((d) => (
                     <option key={d.id} value={d.id}>
@@ -322,9 +323,9 @@ export default function RecommendationPage() {
                         onClick={() => setSoil(option.id)}
                         className={[
                           'group relative flex items-start gap-3 rounded-xl border p-4 text-left transition-all duration-200',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:ring-offset-1',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 focus-visible:ring-offset-1',
                           selected
-                            ? 'border-emerald-500 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-500/10'
+                            ? 'border-primary-green bg-primary-green/5 shadow-sm ring-1 ring-primary-green/10'
                             : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50',
                         ].join(' ')}
                       >
@@ -332,7 +333,7 @@ export default function RecommendationPage() {
                           className={[
                             'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors',
                             selected
-                              ? 'bg-emerald-100 text-emerald-700'
+                              ? 'bg-primary-green/10 text-primary-green'
                               : 'bg-slate-100 text-slate-500 group-hover:text-slate-600',
                           ].join(' ')}
                         >
@@ -351,7 +352,7 @@ export default function RecommendationPage() {
                         <span
                           className={[
                             'absolute right-3 top-3 flex h-4 w-4 items-center justify-center rounded-full text-white transition-all duration-200',
-                            selected ? 'scale-100 bg-emerald-600 opacity-100' : 'scale-75 opacity-0',
+                            selected ? 'scale-100 bg-primary-green opacity-100' : 'scale-75 opacity-0',
                           ].join(' ')}
                           aria-hidden="true"
                         >
@@ -370,7 +371,7 @@ export default function RecommendationPage() {
                 type="button"
                 onClick={handleGenerate}
                 disabled={!canGenerate}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary-green text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-green/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
               >
                 {submitting ? (
                   <>
@@ -423,95 +424,97 @@ const ResultCard = forwardRef<HTMLElement, { result: Recommendation; onReset: ()
     const percent = Math.round(result.confidence_score * 100)
 
     return (
-      <section
-        ref={ref}
-        aria-live="polite"
-        aria-label="Recommendation result"
-        className="mt-6 animate-fade-in-up overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
-      >
-        <div className="p-6 sm:p-7">
-          {/* Crop name + badge */}
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">
-                Recommended crop
+      <EntranceAnimation>
+        <section
+          ref={ref}
+          aria-live="polite"
+          aria-label="Recommendation result"
+          className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+        >
+          <div className="p-5 sm:p-6">
+            {/* Crop name + badge */}
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">
+                  Recommended crop
+                </p>
+                <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-900">
+                  {result.crop_name}
+                </h2>
+              </div>
+              <span
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${confidence.bg} ${confidence.text} ${confidence.ring}`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${confidence.dot}`} />
+                {percent}%
+              </span>
+            </div>
+
+            {/* Confidence bar */}
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-[0.07em]">Confidence</span>
+                <span className={`text-[11px] font-semibold ${confidence.text}`}>{confidence.label}</span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-slate-100" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label={`Confidence: ${percent}%`}>
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${confidence.bar}`}
+                  style={{ width: `${percent}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Reasoning */}
+            <div className="mt-5 border-t border-slate-100 pt-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">Why this crop</p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">{result.reasoning}</p>
+            </div>
+
+            {/* Weather signal */}
+            <div className="mt-5">
+              {result.is_dry_spell ? (
+                <div className="flex items-start gap-2.5 rounded-xl border border-accent-amber/20 bg-accent-amber/5 p-3.5">
+                  <span className="mt-0.5 shrink-0 text-accent-amber">{WarningIcon}</span>
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">Dry spell expected</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-slate-600">
+                      Low rainfall forecast this week. Plan irrigation accordingly.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2.5 rounded-xl border border-slate-100 bg-slate-50 p-3.5">
+                  <span className="mt-0.5 shrink-0 text-primary-green">{DropIcon}</span>
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">Adequate rainfall expected</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+                      No dry spell forecast for the coming week.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {result.error && (
+              <p className="mt-4 text-xs leading-relaxed text-slate-400">
+                Showing a safe fallback recommendation while the AI service is unavailable.
               </p>
-              <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-900">
-                {result.crop_name}
-              </h2>
-            </div>
-            <span
-              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${confidence.bg} ${confidence.text} ${confidence.ring}`}
-            >
-              <span className={`h-1.5 w-1.5 rounded-full ${confidence.dot}`} />
-              {percent}%
-            </span>
-          </div>
-
-          {/* Confidence bar */}
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[11px] font-medium text-slate-400 uppercase tracking-[0.07em]">Confidence</span>
-              <span className={`text-[11px] font-semibold ${confidence.text}`}>{confidence.label}</span>
-            </div>
-            <div className="h-1.5 w-full rounded-full bg-slate-100" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label={`Confidence: ${percent}%`}>
-              <div
-                className={`h-full rounded-full transition-all duration-700 ${confidence.bar}`}
-                style={{ width: `${percent}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Reasoning */}
-          <div className="mt-5 border-t border-slate-100 pt-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">Why this crop</p>
-            <p className="mt-2 text-sm leading-relaxed text-slate-600">{result.reasoning}</p>
-          </div>
-
-          {/* Weather signal */}
-          <div className="mt-5">
-            {result.is_dry_spell ? (
-              <div className="flex items-start gap-2.5 rounded-xl border border-amber-100 bg-amber-50/60 p-3.5">
-                <span className="mt-0.5 shrink-0 text-amber-500">{WarningIcon}</span>
-                <div>
-                  <p className="text-sm font-medium text-amber-800">Dry spell expected</p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-amber-700">
-                    Low rainfall forecast this week. Plan irrigation accordingly.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-start gap-2.5 rounded-xl border border-slate-100 bg-slate-50 p-3.5">
-                <span className="mt-0.5 shrink-0 text-emerald-500">{DropIcon}</span>
-                <div>
-                  <p className="text-sm font-medium text-slate-700">Adequate rainfall expected</p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-                    No dry spell forecast for the coming week.
-                  </p>
-                </div>
-              </div>
             )}
           </div>
 
-          {result.error && (
-            <p className="mt-4 text-xs leading-relaxed text-slate-400">
-              Showing a safe fallback recommendation while the AI service is unavailable.
-            </p>
-          )}
-        </div>
-
-        {/* Footer action */}
-        <div className="border-t border-slate-100 px-6 py-3.5 sm:px-7">
-          <button
-            type="button"
-            onClick={onReset}
-            className="flex items-center gap-1.5 text-xs font-medium text-slate-500 transition-colors hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 rounded"
-          >
-            {RefreshIcon}
-            Try a different soil type
-          </button>
-        </div>
-      </section>
+          {/* Footer action */}
+          <div className="border-t border-slate-100 px-5 py-3.5 sm:px-6">
+            <button
+              type="button"
+              onClick={onReset}
+              className="flex items-center gap-1.5 text-xs font-medium text-slate-500 transition-colors hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 rounded"
+            >
+              {RefreshIcon}
+              Try a different soil type
+            </button>
+          </div>
+        </section>
+      </EntranceAnimation>
     )
   },
 )

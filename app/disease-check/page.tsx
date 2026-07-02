@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase'
 import PhotoUpload from '@/components/PhotoUpload'
+import { EntranceAnimation } from '@/components/EntranceAnimation'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -46,7 +47,7 @@ const LeafIcon = (
 )
 
 const CheckIcon = (
-  <svg viewBox="0 0 24 24" width="20" height="20" {...stroke} strokeWidth={2.5} className="text-emerald-600">
+  <svg viewBox="0 0 24 24" width="20" height="20" {...stroke} strokeWidth={2.5} className="text-primary-green">
     <path d="m20 6-11 11-5-5" />
   </svg>
 )
@@ -78,19 +79,19 @@ function confidenceStyle(score: number): {
   if (score >= 0.8) {
     return {
       label: 'High confidence',
-      text: 'text-emerald-700 font-medium',
-      bg: 'bg-emerald-50',
-      ring: 'ring-emerald-600/10',
-      dot: 'bg-emerald-500',
+      text: 'text-primary-green font-medium',
+      bg: 'bg-primary-green/5',
+      ring: 'ring-primary-green/20',
+      dot: 'bg-primary-green',
     }
   }
   if (score >= 0.6) {
     return {
       label: 'Moderate confidence',
-      text: 'text-amber-700 font-medium',
-      bg: 'bg-amber-50',
-      ring: 'ring-amber-600/10',
-      dot: 'bg-amber-500',
+      text: 'text-accent-amber font-medium',
+      bg: 'bg-accent-amber/5',
+      ring: 'ring-accent-amber/20',
+      dot: 'bg-accent-amber',
     }
   }
   return {
@@ -210,14 +211,14 @@ export default function DiseaseCheckPage() {
         <div className="mx-auto flex h-14 w-full max-w-2xl items-center gap-2 px-5 sm:px-6">
           <Link
             href="/login"
-            className="flex items-center gap-1.5 text-xs text-slate-500 transition-colors hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 rounded px-1.5 py-1"
+            className="flex items-center gap-1.5 text-xs text-slate-500 transition-colors hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 rounded px-1.5 py-1"
           >
             {ArrowLeftIcon}
             <span>Back</span>
           </Link>
           <span className="text-slate-200" aria-hidden="true">/</span>
           <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-            <span className="text-emerald-600">{LeafIcon}</span>
+            <span className="text-primary-green">{LeafIcon}</span>
             Disease Diagnosis
           </span>
         </div>
@@ -252,10 +253,8 @@ export default function DiseaseCheckPage() {
 
           {/* 2. Unauthenticated state */}
           {screenState === 'unauthenticated' && (
-            <motion.div
+            <EntranceAnimation
               key="unauthenticated"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
             >
@@ -266,20 +265,18 @@ export default function DiseaseCheckPage() {
               <div className="mt-5">
                 <Link
                   href="/login"
-                  className="inline-flex h-9 items-center justify-center rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
+                  className="inline-flex h-10 items-center justify-center rounded-lg bg-primary-green px-4 text-sm font-semibold text-white shadow-sm hover:bg-primary-green/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
                 >
                   Sign in
                 </Link>
               </div>
-            </motion.div>
+            </EntranceAnimation>
           )}
 
           {/* 3. Drop/Upload Area */}
           {screenState === 'ready' && (
-            <motion.div
+            <EntranceAnimation
               key="ready"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
             >
               <PhotoUpload
@@ -290,7 +287,7 @@ export default function DiseaseCheckPage() {
                   setScreenState('error')
                 }}
               />
-            </motion.div>
+            </EntranceAnimation>
           )}
 
           {/* 4. Analyzing State */}
@@ -320,16 +317,16 @@ export default function DiseaseCheckPage() {
                 />
 
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/40 p-6 text-center">
-                  <div className="rounded-full bg-emerald-500/10 p-4 ring-1 ring-emerald-500/20 backdrop-blur-md">
+                  <div className="rounded-full bg-primary-green/10 p-4 ring-1 ring-primary-green/20 backdrop-blur-md">
                     <span className="flex h-3 w-3 relative">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-green/80 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-primary-green"></span>
                     </span>
                   </div>
                   <h3 className="mt-4 text-sm font-semibold text-white tracking-wide">
                     ANALYZING SNAPSHOT
                   </h3>
-                  <p className="mt-1 text-xs text-emerald-400 font-mono tracking-wide animate-pulse">
+                  <p className="mt-1 text-xs text-primary-green/80 font-mono tracking-wide animate-pulse">
                     {analysisStatus}
                   </p>
                 </div>
@@ -339,10 +336,8 @@ export default function DiseaseCheckPage() {
 
           {/* 5. Diagnosis Result (Success) */}
           {screenState === 'success' && diagnosisResult && imageUrl && (
-            <motion.div
+            <EntranceAnimation
               key="success"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               className="space-y-6"
             >
@@ -354,13 +349,13 @@ export default function DiseaseCheckPage() {
                     alt="Diagnosed plant leaf"
                     className="h-full w-full object-cover"
                   />
-                  <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+                  <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-primary-green px-3 py-1 text-xs font-semibold text-white shadow-sm">
                     {CheckIcon}
                     Analysis Completed
                   </div>
                 </div>
 
-                <div className="p-6 sm:p-8">
+                <div className="p-5 sm:p-6">
                   {/* Title and Badge */}
                   <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -397,20 +392,18 @@ export default function DiseaseCheckPage() {
               <button
                 type="button"
                 onClick={handleReset}
-                className="flex w-full h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
+                className="flex w-full h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
               >
                 {RefreshIcon}
                 Scan another leaf
               </button>
-            </motion.div>
+            </EntranceAnimation>
           )}
 
           {/* 6. Escalated to Expert State */}
           {screenState === 'escalated' && diagnosisResult && imageUrl && (
-            <motion.div
+            <EntranceAnimation
               key="escalated"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               className="space-y-6"
             >
@@ -422,13 +415,13 @@ export default function DiseaseCheckPage() {
                     alt="Escalated plant leaf"
                     className="h-full w-full object-cover"
                   />
-                  <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-amber-600 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+                  <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-accent-amber px-3 py-1 text-xs font-semibold text-white shadow-sm">
                     {ShieldAlertIcon}
                     Case Submitted
                   </div>
                 </div>
 
-                <div className="p-6 sm:p-8">
+                <div className="p-5 sm:p-6">
                   <div>
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Resolution Flow</span>
                     <h2 className="text-xl font-bold text-slate-900 mt-0.5">
@@ -464,20 +457,18 @@ export default function DiseaseCheckPage() {
               <button
                 type="button"
                 onClick={handleReset}
-                className="flex w-full h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
+                className="flex w-full h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
               >
                 {RefreshIcon}
                 Scan another leaf
               </button>
-            </motion.div>
+            </EntranceAnimation>
           )}
 
           {/* 7. Error state card */}
           {screenState === 'error' && errorMsg && (
-            <motion.div
+            <EntranceAnimation
               key="error"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               className="rounded-2xl border border-rose-100 bg-rose-50/50 p-6 shadow-sm"
             >
@@ -500,7 +491,7 @@ export default function DiseaseCheckPage() {
                   Return to Dashboard
                 </Link>
               </div>
-            </motion.div>
+            </EntranceAnimation>
           )}
         </AnimatePresence>
       </div>

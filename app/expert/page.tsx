@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabaseServer'
+import { EntranceAnimation } from '@/components/EntranceAnimation'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -53,14 +54,14 @@ const ShieldAlertIcon = (
 )
 
 const CheckCircleIcon = (
-  <svg viewBox="0 0 24 24" width="16" height="16" {...stroke} className="text-emerald-600">
+  <svg viewBox="0 0 24 24" width="16" height="16" {...stroke} className="text-primary-green">
     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
     <polyline points="22 4 12 14.01 9 11.01" />
   </svg>
 )
 
 const ClockIcon = (
-  <svg viewBox="0 0 24 24" width="16" height="16" {...stroke} className="text-amber-600">
+  <svg viewBox="0 0 24 24" width="16" height="16" {...stroke} className="text-accent-amber">
     <circle cx="12" cy="12" r="10" />
     <polyline points="12 6 12 12 16 14" />
   </svg>
@@ -118,12 +119,12 @@ export default async function ExpertDashboardPage() {
   const casesTyped = (cases as unknown as CaseRecord[]) || []
 
   return (
-    <main className="min-h-screen bg-slate-50 font-sans">
+    <main className="min-h-screen bg-canvas font-sans">
       {/* Navigation breadcrumb */}
-      <nav className="border-b border-slate-100 bg-white shadow-sm" aria-label="Global breadcrumb">
+      <nav className="border-b border-slate-100 bg-white" aria-label="Global breadcrumb">
         <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-2 px-5 sm:px-6">
           <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-            <span className="text-emerald-600">{LeafIcon}</span>
+            <span className="text-primary-green">{LeafIcon}</span>
             Expert Verification Panel
           </span>
         </div>
@@ -144,7 +145,7 @@ export default async function ExpertDashboardPage() {
             <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-200/60 px-3 py-1.5 text-xs font-semibold text-slate-700">
               Total cases: {casesTyped.length}
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/10">
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-accent-amber/5 px-3 py-1.5 text-xs font-semibold text-accent-amber ring-1 ring-inset ring-accent-amber/20">
               Pending: {casesTyped.filter(c => c.status === 'pending').length}
             </span>
           </div>
@@ -177,81 +178,83 @@ export default async function ExpertDashboardPage() {
               (check.image_url.startsWith('http://') || check.image_url.startsWith('https://'))
 
             return (
-              <article key={record.id} className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
-                {/* Image header */}
-                <div className="relative aspect-[4/3] w-full bg-slate-100 border-b border-slate-100">
-                  {isValidUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={check.image_url}
-                      alt={`Crop diagnosed as ${check.diagnosis}`}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-slate-100 text-slate-400 text-xs">
-                      No Image Available
+              <EntranceAnimation key={record.id} className="flex flex-col">
+                <article className="flex flex-col flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
+                  {/* Image header */}
+                  <div className="relative aspect-[4/3] w-full bg-slate-100 border-b border-slate-100">
+                    {isValidUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={check.image_url}
+                        alt={`Crop diagnosed as ${check.diagnosis}`}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-slate-100 text-slate-400 text-xs">
+                        No Image Available
+                      </div>
+                    )}
+
+                    {/* Status Badge overlay */}
+                    <div className="absolute right-3 top-3">
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm backdrop-blur-md ${
+                        isPending
+                          ? 'bg-accent-amber/10 text-accent-amber ring-1 ring-accent-amber/20'
+                          : 'bg-primary-green/10 text-primary-green ring-1 ring-primary-green/20'
+                      }`}>
+                        {isPending ? ClockIcon : CheckCircleIcon}
+                        <span>{isPending ? 'Pending' : 'Resolved'}</span>
+                      </span>
                     </div>
-                  )}
-
-                  {/* Status Badge overlay */}
-                  <div className="absolute right-3 top-3">
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm backdrop-blur-md ${
-                      isPending
-                        ? 'bg-amber-500/10 text-amber-700 ring-1 ring-amber-500/20'
-                        : 'bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20'
-                    }`}>
-                      {isPending ? ClockIcon : CheckCircleIcon}
-                      <span>{isPending ? 'Pending' : 'Resolved'}</span>
-                    </span>
                   </div>
-                </div>
 
-                {/* Content body */}
-                <div className="flex flex-1 flex-col p-5">
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between text-xs text-slate-400">
-                      <span>Submitted {new Date(record.created_at).toLocaleDateString()}</span>
-                      {check?.confidence_score !== undefined && (
-                        <span className="font-mono">Conf: {(check.confidence_score * 100).toFixed(0)}%</span>
+                  {/* Content body */}
+                  <div className="flex flex-1 flex-col p-5 sm:p-6">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between text-xs text-slate-400">
+                        <span>Submitted {new Date(record.created_at).toLocaleDateString()}</span>
+                        {check?.confidence_score !== undefined && (
+                          <span className="font-mono">Conf: {(check.confidence_score * 100).toFixed(0)}%</span>
+                        )}
+                      </div>
+
+                      <h3 className="mt-2.5 text-base font-bold text-slate-900 line-clamp-1">
+                        {check?.diagnosis || 'Unknown Disease'}
+                      </h3>
+
+                      <p className="mt-1.5 text-xs text-slate-500">
+                        Farmer: <span className="font-medium text-slate-700">{farmer?.name || 'Anonymous Farmer'}</span>
+                      </p>
+
+                      <div className="mt-4 border-t border-slate-100 pt-4">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">AI Treatment Recommendation</h4>
+                        <p className="mt-1.5 text-xs leading-relaxed text-slate-600 line-clamp-3">
+                          {check?.treatment_advice || 'No treatment details saved.'}
+                        </p>
+                      </div>
+
+                      {record.expert_notes && (
+                        <div className="mt-4 border-t border-slate-100 pt-4 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Expert Feedback</h4>
+                          <p className="mt-1.5 text-xs leading-relaxed text-slate-700">
+                            {record.expert_notes}
+                          </p>
+                        </div>
                       )}
                     </div>
 
-                    <h3 className="mt-2.5 text-base font-bold text-slate-900 line-clamp-1">
-                      {check?.diagnosis || 'Unknown Disease'}
-                    </h3>
-
-                    <p className="mt-1.5 text-xs text-slate-500">
-                      Farmer: <span className="font-medium text-slate-700">{farmer?.name || 'Anonymous Farmer'}</span>
-                    </p>
-
-                    <div className="mt-4 border-t border-slate-100 pt-4">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">AI Treatment Recommendation</h4>
-                      <p className="mt-1.5 text-xs leading-relaxed text-slate-600 line-clamp-3">
-                        {check?.treatment_advice || 'No treatment details saved.'}
-                      </p>
+                    {/* Actions bar */}
+                    <div className="mt-5 border-t border-slate-100 pt-4">
+                      <Link
+                        href={`/expert/cases/${record.id}`}
+                        className="inline-flex w-full h-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
+                      >
+                        View Details
+                      </Link>
                     </div>
-
-                    {record.expert_notes && (
-                      <div className="mt-4 border-t border-slate-100 pt-4 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Expert Feedback</h4>
-                        <p className="mt-1.5 text-xs leading-relaxed text-slate-700">
-                          {record.expert_notes}
-                        </p>
-                      </div>
-                    )}
                   </div>
-
-                  {/* Actions bar */}
-                  <div className="mt-5 border-t border-slate-100 pt-4">
-                    <Link
-                      href={`/expert/cases/${record.id}`}
-                      className="inline-flex w-full h-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
-                    >
-                      View Details
-                    </Link>
-                  </div>
-                </div>
-              </article>
+                </article>
+              </EntranceAnimation>
             )
           })}
         </div>
@@ -264,14 +267,14 @@ export default async function ExpertDashboardPage() {
 
 function NoticeView({ title, message }: { title: string; message: string }) {
   return (
-    <main className="min-h-screen bg-slate-50 font-sans flex items-center justify-center p-5">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+    <main className="min-h-screen bg-canvas font-sans flex items-center justify-center p-5">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 text-center shadow-sm">
         <h2 className="text-lg font-bold text-slate-900">{title}</h2>
         <p className="mt-2 text-sm leading-relaxed text-slate-500">{message}</p>
         <div className="mt-5">
           <Link
             href="/login"
-            className="inline-flex h-9 items-center justify-center rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
+            className="inline-flex h-9 items-center justify-center rounded-lg bg-primary-green px-4 text-sm font-semibold text-white shadow-sm hover:bg-primary-green/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
           >
             Sign in
           </Link>

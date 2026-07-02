@@ -14,14 +14,12 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabaseServer'
 import { getViableCrops } from '@/lib/cropLookup'
-import { getCropRecommendation, type WeatherSummary } from '@/lib/gemini'
+import { getCropRecommendation } from '@/lib/gemini'
+import { fetchWeatherSummary } from '@/lib/weather'
 import { SOIL_TYPES } from '@/lib/constants'
 
 /** Valid soil ids, derived from the shared constant so the two never drift. */
 const VALID_SOIL_IDS = new Set<string>(SOIL_TYPES.map((soil) => soil.id))
-
-/** Total weekly rainfall (mm) at or below which we flag a dry spell (MVP rule). */
-const DRY_SPELL_RAINFALL_THRESHOLD_MM = 10
 
 type Season = 'kharif' | 'rabi' | 'summer'
 
@@ -36,63 +34,6 @@ interface DistrictRow {
   name: string
   latitude: number | null
   longitude: number | null
-}
-
-interface OpenMeteoResponse {
-  daily?: {
-    temperature_2m_max?: number[]
-    temperature_2m_min?: number[]
-    precipitation_sum?: number[]
-  }
-}
-
-/** Round to one decimal place for clean, human-friendly numbers. */
-function roundOne(value: number): number {
-  return Math.round(value * 10) / 10
-}
-
-/**
- * Fetch the Open-Meteo 7-day forecast and reduce it to a weather summary.
- * No API key required. Cached for 30 minutes via Next's fetch caching.
- */
-async function fetchWeatherSummary(
-  latitude: number,
-  longitude: number,
-): Promise<WeatherSummary> {
-  const url =
-    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}` +
-    `&longitude=${longitude}` +
-    `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum` +
-    `&forecast_days=7&timezone=auto`
-
-  const response = await fetch(url, { next: { revalidate: 1800 } })
-  if (!response.ok) {
-    throw new Error(`Open-Meteo request failed with status ${response.status}`)
-  }
-
-  const data = (await response.json()) as OpenMeteoResponse
-  const maxTemps = data.daily?.temperature_2m_max ?? []
-  const minTemps = data.daily?.temperature_2m_min ?? []
-  const rainfall = data.daily?.precipitation_sum ?? []
-
-  if (maxTemps.length === 0 || minTemps.length === 0) {
-    throw new Error('Open-Meteo returned no temperature data')
-  }
-
-  // Average daily mean temperature across the forecast window.
-  const dailyMeans = maxTemps.map(
-    (max, index) => (max + (minTemps[index] ?? max)) / 2,
-  )
-  const averageTemperature =
-    dailyMeans.reduce((sum, value) => sum + value, 0) / dailyMeans.length
-
-  const expectedRainfall = rainfall.reduce((sum, value) => sum + value, 0)
-
-  return {
-    averageTemperature: roundOne(averageTemperature),
-    expectedRainfall: roundOne(expectedRainfall),
-    isDrySpell: expectedRainfall <= DRY_SPELL_RAINFALL_THRESHOLD_MM,
-  }
 }
 
 /** Small helper for consistent JSON error responses. */
@@ -192,6 +133,17 @@ export async function POST(request: Request) {
 
     if (insertError) {
       console.error('Failed to save recommendation:', insertError.message)
+    }
+
+    // ── 7b. Remember the selected district so the dashboard shows weather ──
+    // Upsert (not update) so a brand-new user without a profile row still gets
+    // one; only `district_id` is written, so name/role/soil_type are untouched.
+    const { error: districtSaveError } = await supabase
+      .from('users')
+      .upsert({ id: user.id, district_id: district_id.trim() }, { onConflict: 'id' })
+
+    if (districtSaveError) {
+      console.error('Failed to save user district:', districtSaveError.message)
     }
 
     // ── 8. Respond ────────────────────────────────────────────────────────

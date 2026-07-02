@@ -4,6 +4,7 @@ import { forwardRef, useEffect, useMemo, useRef, useState, type ReactNode } from
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import { SOIL_TYPES, type SoilTypeId } from '@/lib/constants'
+import { confidenceStyle } from '@/lib/confidence'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -73,46 +74,6 @@ const SOIL_DETAILS: Record<SoilTypeId, { description: string; icon: ReactNode }>
       </svg>
     ),
   },
-}
-
-// ── Confidence badge styling ────────────────────────────────────────────────
-
-function confidenceStyle(score: number): {
-  label: string
-  dot: string
-  text: string
-  bg: string
-  ring: string
-  bar: string
-} {
-  if (score >= 0.8) {
-    return {
-      label: 'High confidence',
-      dot: 'bg-emerald-500',
-      text: 'text-emerald-700',
-      bg: 'bg-emerald-50',
-      ring: 'ring-emerald-600/20',
-      bar: 'bg-emerald-500',
-    }
-  }
-  if (score >= 0.6) {
-    return {
-      label: 'Moderate confidence',
-      dot: 'bg-amber-500',
-      text: 'text-amber-700',
-      bg: 'bg-amber-50',
-      ring: 'ring-amber-600/20',
-      bar: 'bg-amber-500',
-    }
-  }
-  return {
-    label: 'Low confidence',
-    dot: 'bg-rose-500',
-    text: 'text-rose-700',
-    bg: 'bg-rose-50',
-    ring: 'ring-rose-600/20',
-    bar: 'bg-rose-500',
-  }
 }
 
 // ── Small inline icons ──────────────────────────────────────────────────────

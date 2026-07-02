@@ -13,6 +13,8 @@ import { type ReactNode } from 'react'
 import Link from 'next/link'
 import { confidenceStyle } from '@/lib/confidence'
 import { EntranceAnimation } from '@/components/EntranceAnimation'
+import { EmptyState } from '@/components/EmptyState'
+import { ErrorState } from '@/components/ErrorState'
 
 // ── Types (mirror GET /api/dashboard) ───────────────────────────────────────
 
@@ -406,26 +408,20 @@ export function RecommendationCard({ recommendation }: { recommendation: Recomme
   if (!recommendation || !recommendation.crop_name) {
     return (
       <EntranceAnimation>
-        <section
-          aria-label="Latest recommendation"
-          className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center sm:p-8"
-        >
-        <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-primary-green/5 text-primary-green">
-          <Icon size={20}>{SproutPath}</Icon>
-        </span>
-        <h2 className="mt-3 text-base font-semibold text-slate-900">Get your first recommendation</h2>
-        <p className="mx-auto mt-1 max-w-sm text-sm leading-relaxed text-slate-500">
-          Tell us your soil type and district, and we will suggest the best crop for this season
-          using live weather data.
-        </p>
-        <Link
-          href="/recommendation"
-          className="mt-4 inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-primary-green px-5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-green/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 focus-visible:ring-offset-2"
-        >
-          Get a recommendation
-          <Icon size={15}>{ArrowRightPath}</Icon>
-        </Link>
-        </section>
+        <EmptyState
+          icon={<Icon size={20}>{SproutPath}</Icon>}
+          title="Get your first recommendation"
+          description="Tell us your soil type and district, and we will suggest the best crop for this season using live weather data."
+          action={
+            <Link
+              href="/recommendation"
+              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-primary-green px-5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-green/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 focus-visible:ring-offset-2"
+            >
+              <span>Get a recommendation</span>
+              <Icon size={15}>{ArrowRightPath}</Icon>
+            </Link>
+          }
+        />
       </EntranceAnimation>
     )
   }
@@ -634,26 +630,12 @@ export function DashboardSkeleton() {
 export function ErrorCard({ onRetry }: { onRetry: () => void }) {
   return (
     <EntranceAnimation>
-      <div
-        role="alert"
-        className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
-      >
-      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-rose-50 text-rose-500">
-        <Icon size={20}>{WarningPath}</Icon>
-      </span>
-      <h2 className="mt-3 text-base font-semibold text-slate-900">We could not load your dashboard</h2>
-      <p className="mt-1 text-sm leading-relaxed text-slate-500">
-        Something went wrong while fetching your latest weather and recommendation. Please try again.
-      </p>
-      <button
-        type="button"
-        onClick={onRetry}
-        className="mt-4 inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-5 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/40 focus-visible:ring-offset-2"
-      >
-        <Icon size={15}>{RefreshPath}</Icon>
-        Try again
-      </button>
-      </div>
+      <ErrorState
+        icon={<Icon size={20}>{WarningPath}</Icon>}
+        title="We could not load your dashboard"
+        description="Something went wrong while fetching your latest weather and recommendation. Please try again."
+        onRetry={onRetry}
+      />
     </EntranceAnimation>
   )
 }

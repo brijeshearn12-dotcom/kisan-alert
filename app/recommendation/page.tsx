@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase'
 import { SOIL_TYPES, type SoilTypeId } from '@/lib/constants'
 import { confidenceStyle } from '@/lib/confidence'
 import { EntranceAnimation } from '@/components/EntranceAnimation'
+import { EmptyState } from '@/components/EmptyState'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -597,11 +598,11 @@ function NoticeCard({
   action?: ReactNode
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-      <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{body}</p>
-      {action && <div className="mt-4">{action}</div>}
-    </div>
+    <EmptyState
+      title={title}
+      description={body}
+      action={action}
+    />
   )
 }
 

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabaseServer'
 import CaseDetailView from '@/components/CaseDetailView'
+import { EmptyState } from '@/components/EmptyState'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -97,20 +98,20 @@ export default async function ExpertCaseDetailPage({
 
   if (error || !caseRow) {
     return (
-      <main className="min-h-screen bg-slate-50 font-sans flex items-center justify-center p-5">
-        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
-          <h2 className="text-lg font-bold text-slate-900">Case Not Found</h2>
-          <p className="mt-2 text-sm leading-relaxed text-slate-500">
-            The escalated case with ID &ldquo;{caseId}&rdquo; does not exist or has been removed from the registry.
-          </p>
-          <div className="mt-5">
-            <Link
-              href="/expert"
-              className="inline-flex h-9 items-center justify-center rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
-            >
-              Return to Dashboard
-            </Link>
-          </div>
+      <main className="min-h-screen bg-canvas font-sans flex items-center justify-center p-5">
+        <div className="w-full max-w-md">
+          <EmptyState
+            title="Case Not Found"
+            description={`The escalated case with ID "${caseId}" does not exist or has been removed from the registry.`}
+            action={
+              <Link
+                href="/expert"
+                className="inline-flex h-9 items-center justify-center rounded-lg bg-primary-green px-4 text-sm font-semibold text-white shadow-sm hover:bg-primary-green/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
+              >
+                Return to Dashboard
+              </Link>
+            }
+          />
         </div>
       </main>
     )
@@ -119,12 +120,12 @@ export default async function ExpertCaseDetailPage({
   const caseTyped = caseRow as unknown as CaseRecord
 
   return (
-    <main className="min-h-screen bg-slate-50 font-sans">
+    <main className="min-h-screen bg-canvas font-sans">
       {/* Navigation header */}
-      <nav className="border-b border-slate-100 bg-white shadow-sm" aria-label="Global breadcrumb">
+      <nav className="border-b border-slate-100 bg-white" aria-label="Global breadcrumb">
         <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-2 px-5 sm:px-6">
           <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-            <span className="text-emerald-600">{LeafIcon}</span>
+            <span className="text-primary-green">{LeafIcon}</span>
             Expert Verification Panel
           </span>
         </div>
@@ -141,18 +142,20 @@ export default async function ExpertCaseDetailPage({
 
 function NoticeView({ title, message }: { title: string; message: string }) {
   return (
-    <main className="min-h-screen bg-slate-50 font-sans flex items-center justify-center p-5">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
-        <h2 className="text-lg font-bold text-slate-900">{title}</h2>
-        <p className="mt-2 text-sm leading-relaxed text-slate-500">{message}</p>
-        <div className="mt-5">
-          <Link
-            href="/login"
-            className="inline-flex h-9 items-center justify-center rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
-          >
-            Sign in
-          </Link>
-        </div>
+    <main className="min-h-screen bg-canvas font-sans flex items-center justify-center p-5">
+      <div className="w-full max-w-md">
+        <EmptyState
+          title={title}
+          description={message}
+          action={
+            <Link
+              href="/login"
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-primary-green px-4 text-sm font-semibold text-white shadow-sm hover:bg-primary-green/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
+            >
+              Sign in
+            </Link>
+          }
+        />
       </div>
     </main>
   )

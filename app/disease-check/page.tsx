@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase'
 import PhotoUpload from '@/components/PhotoUpload'
 import { EntranceAnimation } from '@/components/EntranceAnimation'
+import { EmptyState } from '@/components/EmptyState'
+import { ErrorState } from '@/components/ErrorState'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -256,20 +258,19 @@ export default function DiseaseCheckPage() {
             <EntranceAnimation
               key="unauthenticated"
               exit={{ opacity: 0 }}
-              className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
             >
-              <h2 className="text-base font-semibold text-slate-900">Sign in required</h2>
-              <p className="mt-2 text-sm leading-relaxed text-slate-500">
-                You must be logged in to access the disease diagnosis tool and submit crop scans for review.
-              </p>
-              <div className="mt-5">
-                <Link
-                  href="/login"
-                  className="inline-flex h-10 items-center justify-center rounded-lg bg-primary-green px-4 text-sm font-semibold text-white shadow-sm hover:bg-primary-green/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
-                >
-                  Sign in
-                </Link>
-              </div>
+              <EmptyState
+                title="Sign in required"
+                description="You must be logged in to access the disease diagnosis tool and submit crop scans for review."
+                action={
+                  <Link
+                    href="/login"
+                    className="inline-flex h-10 items-center justify-center rounded-lg bg-primary-green px-4 text-sm font-semibold text-white shadow-sm hover:bg-primary-green/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
+                  >
+                    Sign in
+                  </Link>
+                }
+              />
             </EntranceAnimation>
           )}
 
@@ -470,27 +471,21 @@ export default function DiseaseCheckPage() {
             <EntranceAnimation
               key="error"
               exit={{ opacity: 0 }}
-              className="rounded-2xl border border-rose-100 bg-rose-50/50 p-6 shadow-sm"
             >
-              <h3 className="text-base font-bold text-rose-850">Diagnosis Failed</h3>
-              <p className="mt-2 text-sm leading-relaxed text-rose-700">
-                {errorMsg}
-              </p>
-              <div className="mt-5 flex gap-3">
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="inline-flex h-9 items-center justify-center rounded-lg bg-rose-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-rose-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
-                >
-                  Try Again
-                </button>
-                <Link
-                  href="/login"
-                  className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/40"
-                >
-                  Return to Dashboard
-                </Link>
-              </div>
+              <ErrorState
+                title="Diagnosis Failed"
+                description={errorMsg}
+                onRetry={handleReset}
+                retryText="Try Again"
+                secondaryAction={
+                  <Link
+                    href="/login"
+                    className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/40"
+                  >
+                    Return to Dashboard
+                  </Link>
+                }
+              />
             </EntranceAnimation>
           )}
         </AnimatePresence>

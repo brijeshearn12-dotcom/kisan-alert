@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabaseServer'
 import { EntranceAnimation } from '@/components/EntranceAnimation'
+import { EmptyState } from '@/components/EmptyState'
+import { ErrorState } from '@/components/ErrorState'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -152,18 +154,18 @@ export default async function ExpertDashboardPage() {
         </header>
 
         {error && (
-          <div className="rounded-xl border border-rose-100 bg-rose-50/50 p-5 text-sm text-rose-700" role="alert">
-            <p className="font-semibold">Database connection error</p>
-            <p className="mt-1">Failed to read records from the cases registry. Please verify database RLS policies allow selection for expert accounts.</p>
-          </div>
+          <ErrorState
+            title="Database connection error"
+            description="Failed to read records from the cases registry. Please verify database RLS policies allow selection for expert accounts."
+          />
         )}
 
         {!error && casesTyped.length === 0 && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-            <span className="mx-auto block text-slate-300 w-fit">{ShieldAlertIcon}</span>
-            <h3 className="mt-4 text-sm font-semibold text-slate-900">No cases waiting</h3>
-            <p className="mt-1.5 text-sm text-slate-500">All automated plant checks are currently healthy or resolved. No escalated leaf scans require your review.</p>
-          </div>
+          <EmptyState
+            icon={<span className="mx-auto block text-slate-300 w-fit">{ShieldAlertIcon}</span>}
+            title="No cases waiting"
+            description="All automated plant checks are currently healthy or resolved. No escalated leaf scans require your review."
+          />
         )}
 
         {/* Cases Grid */}
@@ -268,17 +270,19 @@ export default async function ExpertDashboardPage() {
 function NoticeView({ title, message }: { title: string; message: string }) {
   return (
     <main className="min-h-screen bg-canvas font-sans flex items-center justify-center p-5">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 text-center shadow-sm">
-        <h2 className="text-lg font-bold text-slate-900">{title}</h2>
-        <p className="mt-2 text-sm leading-relaxed text-slate-500">{message}</p>
-        <div className="mt-5">
-          <Link
-            href="/login"
-            className="inline-flex h-9 items-center justify-center rounded-lg bg-primary-green px-4 text-sm font-semibold text-white shadow-sm hover:bg-primary-green/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
-          >
-            Sign in
-          </Link>
-        </div>
+      <div className="w-full max-w-md">
+        <EmptyState
+          title={title}
+          description={message}
+          action={
+            <Link
+              href="/login"
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-primary-green px-4 text-sm font-semibold text-white shadow-sm hover:bg-primary-green/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
+            >
+              Sign in
+            </Link>
+          }
+        />
       </div>
     </main>
   )

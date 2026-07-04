@@ -18,6 +18,7 @@ import { getCropRecommendation } from '@/lib/gemini'
 import { translateText } from '@/lib/googleCloud'
 import { fetchWeatherSummary } from '@/lib/weather'
 import { SOIL_TYPES } from '@/lib/constants'
+import { sendFirebaseNotification } from '@/lib/firebase'
 
 /** Valid soil ids, derived from the shared constant so the two never drift. */
 const VALID_SOIL_IDS = new Set<string>(SOIL_TYPES.map((soil) => soil.id))
@@ -327,6 +328,31 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
       ])
       translated = { reasoning, fertilization_tip, irrigation_advice }
     }
+
+    // Trigger Firebase notifications
+    const notificationPromises = []
+
+    // Event 2: New Recommendation Generated
+    notificationPromises.push(
+      sendFirebaseNotification(userId, {
+        message: `🌾 Your crop recommendation is ready: ${recommendation.crop_name}`,
+        timestamp: Date.now(),
+        read: false,
+      })
+    )
+
+    // Event 1: Dry Spell Detected
+    if (weatherSummary.isDrySpell) {
+      notificationPromises.push(
+        sendFirebaseNotification(userId, {
+          message: '⚠️ Dry spell detected. Irrigation recommended for your crop.',
+          timestamp: Date.now(),
+          read: false,
+        })
+      )
+    }
+
+    await Promise.all(notificationPromises)
 
     // ── 9. Respond ────────────────────────────────────────────────────────
     console.log({ location: "route.ts success respond block", recommendation })

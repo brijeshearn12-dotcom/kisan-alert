@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabaseServer'
+import { sendFirebaseNotification } from '@/lib/firebase'
 
 export async function PATCH(
   request: Request,
@@ -78,6 +79,22 @@ export async function PATCH(
         { error: 'Failed to update the case record.' },
         { status: 500 }
       )
+    }
+
+    if (status === 'resolved') {
+      const { data: checkData, error: checkError } = await supabase
+        .from('disease_checks')
+        .select('user_id')
+        .eq('id', updatedCase.disease_check_id)
+        .single()
+
+      if (!checkError && checkData) {
+        await sendFirebaseNotification(checkData.user_id, {
+          message: '✅ Your crop health query has been resolved by Rythu Seva Kendra.',
+          timestamp: Date.now(),
+          read: false,
+        })
+      }
     }
 
     return NextResponse.json({ case: updatedCase })

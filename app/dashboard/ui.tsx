@@ -15,6 +15,7 @@ import { confidenceStyle } from '@/lib/confidence'
 import { EntranceAnimation } from '@/components/EntranceAnimation'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
+import { NotificationPanel } from '@/components/NotificationPanel'
 
 // ── Types (mirror GET /api/dashboard) ───────────────────────────────────────
 
@@ -216,6 +217,7 @@ export function TopNav({
                 {district}
               </span>
             )}
+            <NotificationPanel />
             <span
               className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600"
               aria-hidden="true"

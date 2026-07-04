@@ -13,7 +13,7 @@ export default function SatelliteMap({
 }: SatelliteMapProps) {
   if (latitude === null || longitude === null) {
     return (
-      <div className="flex h-[200px] w-full flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-slate-500">
+      <div className="flex h-[200px] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 text-slate-500">
         <p className="text-sm font-medium">Select a district to view satellite imagery</p>
       </div>
     )
@@ -22,13 +22,13 @@ export default function SatelliteMap({
   const embedUrl = `https://maps.google.com/maps?q=${latitude},${longitude}&t=k&z=11&output=embed`
 
   return (
-    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm mb-6">
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm mb-6">
       <div className="border-b border-slate-100 px-4 py-2 bg-slate-50/50">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
           Satellite View — {districtName}
         </h3>
       </div>
-      <div className="relative h-[200px] w-full bg-slate-100">
+      <div className="relative h-[200px] w-full bg-slate-100 bg-slate-200 animate-pulse">
         <iframe
           src={embedUrl}
           width="100%"

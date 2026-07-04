@@ -202,7 +202,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
         <button
           type="button"
           onClick={startRecording}
-          className="flex w-full items-center justify-center gap-2.5 rounded-xl border-2 border-dashed border-primary-green/30 bg-primary-green/5 px-5 py-4 text-sm font-semibold text-primary-green transition-all hover:border-primary-green/50 hover:bg-primary-green/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
+          className="flex w-full items-center justify-center gap-2.5 rounded-2xl border-2 border-dashed border-primary-green/30 bg-primary-green/5 px-5 py-4 text-sm font-semibold text-primary-green transition-all hover:border-primary-green/50 hover:bg-primary-green/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 min-h-[44px]"
         >
           {MicIcon}
           🎙 Describe Your Problem
@@ -211,7 +211,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
 
       {/* ── Recording: countdown + stop button ─── */}
       {state === 'recording' && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-5 text-center space-y-3">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-center space-y-3 animate-pulse">
           <div className="flex items-center justify-center gap-2">
             <span className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
@@ -232,7 +232,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
           <button
             type="button"
             onClick={stopRecording}
-            className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40 min-h-[44px] min-w-[120px]"
           >
             {StopIcon}
             Stop Recording
@@ -242,7 +242,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
 
       {/* ── Transcribing: spinner ─── */}
       {state === 'transcribing' && (
-        <div className="flex items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white p-6">
+        <div className="flex items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white p-6">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-green border-t-transparent" />
           <span className="text-sm font-medium text-slate-600">Transcribing your voice…</span>
         </div>
@@ -258,7 +258,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
             value={transcript}
             onChange={(e) => handleTextChange(e.target.value)}
             rows={4}
-            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 leading-relaxed shadow-sm transition-colors focus:border-primary-green/50 focus:outline-none focus:ring-2 focus:ring-primary-green/20 resize-y"
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 leading-relaxed shadow-sm transition-colors focus:border-primary-green/50 focus:outline-none focus:ring-2 focus:ring-primary-green/20 resize-y"
             placeholder="Edit your description here…"
           />
           <button
@@ -278,7 +278,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
       {/* ── Mic denied: permanent fallback textarea ─── */}
       {state === 'mic-denied' && (
         <div className="space-y-3">
-          <div className="flex items-start gap-2.5 rounded-xl border border-accent-amber/20 bg-accent-amber/5 p-3.5">
+          <div className="flex items-start gap-2.5 rounded-2xl border border-accent-amber/20 bg-accent-amber/5 p-3.5">
             <span className="mt-0.5 shrink-0 text-accent-amber text-sm">⚠️</span>
             <p className="text-sm text-slate-600">
               Microphone access denied. Please type your description instead.
@@ -291,7 +291,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
             value={transcript}
             onChange={(e) => handleTextChange(e.target.value)}
             rows={4}
-            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 leading-relaxed shadow-sm transition-colors focus:border-primary-green/50 focus:outline-none focus:ring-2 focus:ring-primary-green/20 resize-y"
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 leading-relaxed shadow-sm transition-colors focus:border-primary-green/50 focus:outline-none focus:ring-2 focus:ring-primary-green/20 resize-y"
             placeholder="E.g. My rice leaves are turning yellow with brown spots…"
           />
         </div>
@@ -300,7 +300,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
       {/* ── STT error: retry option ─── */}
       {state === 'stt-error' && (
         <div className="space-y-3">
-          <div className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3.5">
+          <div className="flex items-start gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 p-3.5">
             <span className="mt-0.5 shrink-0 text-rose-500 text-sm">❌</span>
             <div>
               <p className="text-sm font-medium text-rose-700">Transcription failed</p>
@@ -316,7 +316,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
                 setState('idle')
                 startRecording()
               }}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-primary-green px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-primary-green/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary-green px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-primary-green/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 min-h-[44px]"
             >
               {MicIcon}
               Try Again
@@ -324,7 +324,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
             <button
               type="button"
               onClick={() => setState('mic-denied')}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/40"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/40 min-h-[44px]"
             >
               Type Instead
             </button>

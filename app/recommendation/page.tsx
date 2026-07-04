@@ -7,6 +7,24 @@ import { SOIL_TYPES, type SoilTypeId } from '@/lib/constants'
 import { confidenceStyle } from '@/lib/confidence'
 import { EntranceAnimation } from '@/components/EntranceAnimation'
 import { EmptyState } from '@/components/EmptyState'
+import { ListenButton } from '@/components/ListenButton'
+
+function langToLanguageCode(
+  lang: 'en' | 'hi' | 'te' | 'mr'
+): 'en-IN' | 'hi-IN' | 'te-IN' | 'mr-IN' {
+  switch (lang) {
+    case 'en':
+      return 'en-IN'
+    case 'hi':
+      return 'hi-IN'
+    case 'te':
+      return 'te-IN'
+    case 'mr':
+      return 'mr-IN'
+    default:
+      return 'en-IN'
+  }
+}
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -578,6 +596,10 @@ const ResultCard = forwardRef<
             <div className="mt-5 border-t border-slate-100 pt-5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">Why this crop</p>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">{fields.reasoning}</p>
+              <ListenButton
+                text={fields.reasoning}
+                languageCode={langToLanguageCode(language)}
+              />
             </div>
 
             {/* Weather signal */}
@@ -632,11 +654,13 @@ const ResultCard = forwardRef<
             emoji="🌱"
             title="Fertilization Tip"
             body={fields.fertilization_tip?.trim() ? fields.fertilization_tip : 'No recommendation available.'}
+            languageCode={langToLanguageCode(language)}
           />
           <AdvisoryCard
             emoji="💧"
             title="Irrigation Advice"
             body={fields.irrigation_advice?.trim() ? fields.irrigation_advice : 'No recommendation available.'}
+            languageCode={langToLanguageCode(language)}
           />
         </div>
       </EntranceAnimation>
@@ -654,10 +678,12 @@ function AdvisoryCard({
   emoji,
   title,
   body,
+  languageCode,
 }: {
   emoji: string
   title: string
   body: string
+  languageCode: string
 }) {
   return (
     <section className="rounded-2xl border border-primary-green/15 bg-primary-green/5 p-5 shadow-sm sm:p-6">
@@ -673,6 +699,9 @@ function AdvisoryCard({
         </h3>
       </div>
       <p className="mt-3 text-sm leading-relaxed text-slate-600">{body}</p>
+      {body !== 'No recommendation available.' && (
+        <ListenButton text={body} languageCode={languageCode} />
+      )}
     </section>
   )
 }

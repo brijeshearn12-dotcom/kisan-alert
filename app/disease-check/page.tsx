@@ -8,6 +8,7 @@ import PhotoUpload from '@/components/PhotoUpload'
 import { EntranceAnimation } from '@/components/EntranceAnimation'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
+import { ListenButton } from '@/components/ListenButton'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -385,6 +386,12 @@ export default function DiseaseCheckPage() {
                     <p className="mt-2 text-sm leading-relaxed text-slate-600 whitespace-pre-line">
                       {diagnosisResult.treatment_advice}
                     </p>
+                    {diagnosisResult.treatment_advice && (
+                      <ListenButton
+                        text={diagnosisResult.treatment_advice}
+                        languageCode="en-IN"
+                      />
+                    )}
                   </div>
                 </div>
               </div>

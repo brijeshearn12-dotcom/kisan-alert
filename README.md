@@ -79,6 +79,29 @@ POST /api/recommendations
   └── Return { crop_name, reasoning, confidence_score, is_dry_spell }
 ```
 
+## Testing Recommendations Locally
+
+We have provided a dedicated development-only endpoint to easily test crop recommendations without needing to sign in, provide a session cookie, or build a complex request body.
+
+### Test Endpoint (Development Only)
+
+Use the following PowerShell command to test recommendation generation:
+
+```powershell
+Invoke-RestMethod `
+-Uri "http://localhost:3000/api/recommendations/test" `
+-Method POST
+```
+
+**Why this route exists:**
+- Eliminates local manual lookup of valid database UUIDs (`district_id`) or soil IDs (`soil_type`).
+- Automatically falls back to the first available district in the database and the first valid soil type from `SOIL_TYPES`.
+- Generates recommendations using a mock/temporary developer user ID `00000000-0000-0000-0000-000000000000` to bypass authentication barriers in local environments.
+
+**Security & Environment Check:**
+- This route is blocked in production by returning a `405 Method Not Allowed` error if `process.env.NODE_ENV !== "development"`.
+- Production authentication is fully preserved on `/api/recommendations`.
+
 ## Commands
 
 ```bash

@@ -68,10 +68,10 @@ alter table cases           enable row level security;
 -- 3. RLS POLICIES
 -- -------------------------
 
--- districts: readable by anyone logged in (lookup table)
-create policy "districts: logged-in read"
+-- districts: readable by anyone (lookup table)
+create policy "districts: public read"
   on districts for select
-  to authenticated
+  to anon, authenticated
   using (true);
 
 

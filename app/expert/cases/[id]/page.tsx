@@ -58,7 +58,7 @@ export default async function ExpertCaseDetailPage({
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return <NoticeView title="Authentication Required" message="You must be signed in to access the expert portal." />
+    return <NoticeView title="Authentication Required" message="You must be signed in to access the Rythu Seva Kendra portal." />
   }
 
   // 2. Authorize user (must be an expert)
@@ -69,7 +69,7 @@ export default async function ExpertCaseDetailPage({
     .single()
 
   if (!profile || profile.role !== 'expert') {
-    return <NoticeView title="Access Denied" message="This dashboard is restricted to agricultural experts and extension officers." />
+    return <NoticeView title="Access Denied" message="This dashboard is restricted to Rythu Seva Kendra officers and extension officers." />
   }
 
   // 3. Fetch specific case details
@@ -126,7 +126,7 @@ export default async function ExpertCaseDetailPage({
         <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-2 px-5 sm:px-6">
           <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
             <span className="text-primary-green">{LeafIcon}</span>
-            Expert Verification Panel
+            Rythu Seva Kendra Verification Panel
           </span>
         </div>
       </nav>

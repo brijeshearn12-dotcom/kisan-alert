@@ -80,7 +80,7 @@ export default async function ExpertDashboardPage() {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return <NoticeView title="Authentication Required" message="You must be signed in to access the expert portal." />
+    return <NoticeView title="Authentication Required" message="You must be signed in to access the Rythu Seva Kendra portal." />
   }
 
   // 2. Authorize user (must be an expert)
@@ -91,7 +91,7 @@ export default async function ExpertDashboardPage() {
     .single()
 
   if (!profile || profile.role !== 'expert') {
-    return <NoticeView title="Access Denied" message="This dashboard is restricted to agricultural experts and extension officers." />
+    return <NoticeView title="Access Denied" message="This dashboard is restricted to Rythu Seva Kendra officers and extension officers." />
   }
 
   // 3. Fetch cases
@@ -127,7 +127,7 @@ export default async function ExpertDashboardPage() {
         <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-2 px-5 sm:px-6">
           <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
             <span className="text-primary-green">{LeafIcon}</span>
-            Expert Verification Panel
+            Rythu Seva Kendra Verification Panel
           </span>
         </div>
       </nav>
@@ -156,7 +156,7 @@ export default async function ExpertDashboardPage() {
         {error && (
           <ErrorState
             title="Database connection error"
-            description="Failed to read records from the cases registry. Please verify database RLS policies allow selection for expert accounts."
+            description="Failed to read records from the cases registry. Please verify database RLS policies allow selection for Rythu Seva Kendra accounts."
           />
         )}
 
@@ -237,7 +237,7 @@ export default async function ExpertDashboardPage() {
 
                       {record.expert_notes && (
                         <div className="mt-4 border-t border-slate-100 pt-4 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Expert Feedback</h4>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Rythu Seva Kendra Feedback</h4>
                           <p className="mt-1.5 text-xs leading-relaxed text-slate-700">
                             {record.expert_notes}
                           </p>

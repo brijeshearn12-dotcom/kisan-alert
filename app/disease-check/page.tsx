@@ -233,7 +233,7 @@ export default function DiseaseCheckPage() {
             AI Disease Diagnosis
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-slate-500">
-            Upload a high-quality photo of your affected plant leaf to receive an instant diagnosis, treatment details, and expert review.
+            Upload a high-quality photo of your affected plant leaf to receive an instant diagnosis, treatment details, and Rythu Seva Kendra review.
           </p>
         </header>
 
@@ -426,12 +426,12 @@ export default function DiseaseCheckPage() {
                   <div>
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Resolution Flow</span>
                     <h2 className="text-xl font-bold text-slate-900 mt-0.5">
-                      Forwarded to Agricultural Expert
+                      Forwarded to Rythu Seva Kendra
                     </h2>
                   </div>
 
                   <p className="mt-4 text-sm leading-relaxed text-slate-600">
-                    The AI confidence score for this scan was low ({(diagnosisResult.confidence_score * 100).toFixed(0)}%). To ensure you receive accurate guidance, we have escalated this case to our expert verification panel.
+                    The AI confidence score for this scan was low ({(diagnosisResult.confidence_score * 100).toFixed(0)}%). To ensure you receive accurate guidance, we have escalated this case to our RSK verification panel.
                   </p>
 
                   <div className="mt-6 border-t border-slate-100 pt-6 space-y-4">
@@ -496,7 +496,7 @@ export default function DiseaseCheckPage() {
         {screenState === 'loading' && 'Checking authentication status'}
         {screenState === 'analyzing' && analysisStatus}
         {screenState === 'success' && `Analysis complete. Diagnosed as ${diagnosisResult?.diagnosis}`}
-        {screenState === 'escalated' && 'Diagnosis complete. Case escalated for expert review.'}
+        {screenState === 'escalated' && 'Diagnosis complete. Case escalated for Rythu Seva Kendra review.'}
         {screenState === 'error' && `Analysis failed: ${errorMsg}`}
       </p>
     </main>

@@ -511,7 +511,7 @@ export function QuickActions({ isExpert }: { isExpert: boolean }) {
   if (isExpert) {
     actions.push({
       href: '/expert',
-      title: 'Expert Dashboard',
+      title: 'RSK Dashboard',
       description: 'Review escalated farmer cases.',
       icon: ShieldPath,
     })

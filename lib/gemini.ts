@@ -16,6 +16,10 @@ export interface CropRecommendation {
   crop_name: string
   reasoning: string
   confidence_score: number
+  /** One practical, low-cost fertilizer action for the coming week. */
+  fertilization_tip: string
+  /** One irrigation instruction based on crop stage and current weather. */
+  irrigation_advice: string
   error?: string
 }
 
@@ -49,6 +53,10 @@ function buildFallback(
     crop_name: viableCrops[0] ?? 'No crop available',
     reasoning: FALLBACK_REASONING,
     confidence_score: 0,
+    fertilization_tip:
+      'Apply a small, balanced dose of Urea or DAP as per your local practice once the AI service is back.',
+    irrigation_advice:
+      'Water your field based on soil moisture and the current weather until detailed advice is available.',
     error: errorMessage,
   }
 }
@@ -79,7 +87,20 @@ function buildPrompt(
     '',
     'Consider the soil type, district, season, and weather summary. Be conservative when uncertain.',
     'Respond with ONLY valid JSON (no markdown, no code fences, no commentary) in exactly this shape:',
-    '{"crop_name": "<one crop from the list>", "reasoning": "<2-3 simple sentences>", "confidence_score": <number between 0 and 1>}',
+    '{"crop_name": "<one crop from the list>", "reasoning": "<2-3 simple sentences>", "confidence_score": <number between 0 and 1>, "fertilization_tip": "<one sentence>", "irrigation_advice": "<one sentence>"}',
+    '',
+    'fertilization_tip:',
+    '- Exactly ONE sentence.',
+    '- Practical and low-cost.',
+    '- Recommend the simplest fertilizer action for the coming week.',
+    '- Prefer fertilizers commonly available in India such as Urea or DAP when appropriate.',
+    '- Use plain language suitable for farmers.',
+    '',
+    'irrigation_advice:',
+    '- Exactly ONE sentence.',
+    '- Recommend irrigation based on crop stage and current weather conditions.',
+    '- Keep the advice practical and easy to follow.',
+    '- Use simple farmer-friendly language.',
   ].join('\n')
 }
 
@@ -106,6 +127,8 @@ function normalizeModelOutput(
   const rawName = record.crop_name
   const rawReasoning = record.reasoning
   const rawScore = record.confidence_score
+  const rawFertilization = record.fertilization_tip
+  const rawIrrigation = record.irrigation_advice
 
   if (typeof rawName !== 'string' || rawName.trim() === '') return null
 
@@ -126,7 +149,25 @@ function normalizeModelOutput(
     typeof rawScore === 'number' && Number.isFinite(rawScore) ? rawScore : 0.5
   const confidence_score = Math.min(1, Math.max(0, numericScore))
 
-  return { crop_name: matchedCrop, reasoning, confidence_score }
+  // The two advisory fields are required in our contract but must never cause a
+  // valid crop pick to be discarded — fall back to safe generic guidance.
+  const fertilization_tip =
+    typeof rawFertilization === 'string' && rawFertilization.trim() !== ''
+      ? rawFertilization.trim()
+      : 'Apply a light, balanced dose of Urea or DAP this week as per local practice.'
+
+  const irrigation_advice =
+    typeof rawIrrigation === 'string' && rawIrrigation.trim() !== ''
+      ? rawIrrigation.trim()
+      : 'Irrigate lightly based on soil moisture and this week’s weather.'
+
+  return {
+    crop_name: matchedCrop,
+    reasoning,
+    confidence_score,
+    fertilization_tip,
+    irrigation_advice,
+  }
 }
 
 /**

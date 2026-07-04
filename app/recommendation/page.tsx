@@ -15,16 +15,70 @@ interface District {
   name: string
 }
 
+/** Translated copies of the advisory fields; present only for non-English. */
+interface TranslatedFields {
+  reasoning: string
+  fertilization_tip: string
+  irrigation_advice: string
+}
+
 interface Recommendation {
   crop_name: string
   reasoning: string
   confidence_score: number
+  fertilization_tip: string
+  irrigation_advice: string
   is_dry_spell: boolean
+  /** Present when a non-English language was requested. */
+  translated?: TranslatedFields
   /** Present when the AI service fell back to a safe default. */
   error?: string
 }
 
 type InitState = 'loading' | 'ready' | 'unauthenticated' | 'error'
+
+// ── Languages ─────────────────────────────────────────────────────────────────
+
+type LanguageCode = 'en' | 'hi' | 'te' | 'mr'
+
+const LANGUAGE_STORAGE_KEY = 'preferredLanguage'
+
+interface LanguageOption {
+  code: LanguageCode
+  label: string
+  flag: string
+}
+
+/** Selector options. Flags are emoji so no image assets are required. */
+const LANGUAGES: LanguageOption[] = [
+  { code: 'en', label: 'English', flag: '🇬🇧' },
+  { code: 'hi', label: 'हिन्दी', flag: '🇮🇳' },
+  { code: 'te', label: 'తెలుగు', flag: '🇮🇳' },
+  { code: 'mr', label: 'मराठी', flag: '🇮🇳' },
+]
+
+/** Narrow an arbitrary string (e.g. from localStorage) to a supported code. */
+function isLanguageCode(value: string | null): value is LanguageCode {
+  return value === 'en' || value === 'hi' || value === 'te' || value === 'mr'
+}
+
+/**
+ * Resolve which advisory copy to show for the active language.
+ * Falls back to English whenever a translation is missing (Task 7).
+ */
+function displayFields(
+  result: Recommendation,
+  lang: LanguageCode,
+): TranslatedFields {
+  if (lang !== 'en' && result.translated) {
+    return result.translated
+  }
+  return {
+    reasoning: result.reasoning,
+    fertilization_tip: result.fertilization_tip,
+    irrigation_advice: result.irrigation_advice,
+  }
+}
 
 // ── Soil presentation (copy + icons live here; ids/labels come from constants)─
 
@@ -142,6 +196,16 @@ export default function RecommendationPage() {
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<Recommendation | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
+  const [language, setLanguage] = useState<LanguageCode>('en')
+
+  // Restore the saved language preference once on mount (Task 4). Runs only in
+  // the browser, so it never touches SSR and defaults to 'en' when unset.
+  useEffect(() => {
+    const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY)
+    if (isLanguageCode(saved)) {
+      setLanguage(saved)
+    }
+  }, [])
 
   // Load the session + district options once on mount.
   useEffect(() => {
@@ -190,8 +254,11 @@ export default function RecommendationPage() {
     }
   }, [result])
 
-  async function handleGenerate() {
-    if (!soil || !districtId || submitting) return
+  // Shared request used by both the generate button and language switching.
+  // `lang` is passed explicitly (not read from state) so an immediate re-fetch
+  // after a language change uses the new value without waiting for a re-render.
+  async function requestRecommendation(targetSoil: SoilTypeId, lang: LanguageCode) {
+    if (!districtId || submitting) return
 
     setSubmitting(true)
     setFormError(null)
@@ -201,7 +268,11 @@ export default function RecommendationPage() {
       const res = await fetch('/api/recommendations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ district_id: districtId, soil_type: soil }),
+        body: JSON.stringify({
+          district_id: districtId,
+          soil_type: targetSoil,
+          target_lang: lang,
+        }),
       })
       const data: Recommendation & { error?: string } = await res.json()
 
@@ -214,6 +285,22 @@ export default function RecommendationPage() {
       setFormError('Network error. Check your connection and try again.')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  function handleGenerate() {
+    if (!soil) return
+    requestRecommendation(soil, language)
+  }
+
+  // Change language: update state, persist to localStorage (Task 4), and — if a
+  // result is already on screen — re-request it in the newly selected language.
+  function handleLanguageChange(next: LanguageCode) {
+    if (next === language) return
+    setLanguage(next)
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, next)
+    if (result && soil && !submitting) {
+      requestRecommendation(soil, next)
     }
   }
 
@@ -242,6 +329,11 @@ export default function RecommendationPage() {
             <span className="text-primary-green">{LeafIcon}</span>
             Crop Advisory
           </span>
+
+          {/* Language selector — compact, sits above the recommendation card. */}
+          <div className="ml-auto">
+            <LanguageSelector value={language} onChange={handleLanguageChange} disabled={submitting} />
+          </div>
         </div>
       </div>
 
@@ -408,7 +500,12 @@ export default function RecommendationPage() {
 
             {/* Result */}
             {!submitting && result && (
-              <ResultCard ref={resultRef} result={result} onReset={handleReset} />
+              <ResultCard
+                ref={resultRef}
+                result={result}
+                language={language}
+                onReset={handleReset}
+              />
             )}
           </>
         )}
@@ -419,10 +516,18 @@ export default function RecommendationPage() {
 
 // ── Result card ─────────────────────────────────────────────────────────────
 
-const ResultCard = forwardRef<HTMLElement, { result: Recommendation; onReset: () => void }>(
-  function ResultCard({ result, onReset }, ref) {
+const ResultCard = forwardRef<
+  HTMLElement,
+  { result: Recommendation; language: LanguageCode; onReset: () => void }
+>(
+  function ResultCard({ result, language, onReset }, ref) {
     const confidence = confidenceStyle(result.confidence_score)
     const percent = Math.round(result.confidence_score * 100)
+
+    // Reasoning + both tips follow the active language; everything else
+    // (crop name, confidence, dry-spell) always stays English. Falls back to
+    // English automatically when a translation is missing.
+    const fields = displayFields(result, language)
 
     return (
       <EntranceAnimation>
@@ -468,7 +573,7 @@ const ResultCard = forwardRef<HTMLElement, { result: Recommendation; onReset: ()
             {/* Reasoning */}
             <div className="mt-5 border-t border-slate-100 pt-5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">Why this crop</p>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600">{result.reasoning}</p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">{fields.reasoning}</p>
             </div>
 
             {/* Weather signal */}
@@ -515,10 +620,115 @@ const ResultCard = forwardRef<HTMLElement, { result: Recommendation; onReset: ()
             </button>
           </div>
         </section>
+
+        {/* Advisory cards — sit directly below the recommendation card and share
+            its spacing, radius, and subtle green theme. */}
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <AdvisoryCard
+            emoji="🌱"
+            title="Fertilization Tip"
+            body={fields.fertilization_tip?.trim() ? fields.fertilization_tip : 'No recommendation available.'}
+          />
+          <AdvisoryCard
+            emoji="💧"
+            title="Irrigation Advice"
+            body={fields.irrigation_advice?.trim() ? fields.irrigation_advice : 'No recommendation available.'}
+          />
+        </div>
       </EntranceAnimation>
     )
   },
 )
+
+// ── Advisory card (fertilization / irrigation) ──────────────────────────────
+
+/**
+ * A compact card matching the recommendation card's design system: same border
+ * radius, border, shadow, and typography, with a subtle green accent header.
+ */
+function AdvisoryCard({
+  emoji,
+  title,
+  body,
+}: {
+  emoji: string
+  title: string
+  body: string
+}) {
+  return (
+    <section className="rounded-2xl border border-primary-green/15 bg-primary-green/5 p-5 shadow-sm sm:p-6">
+      <div className="flex items-center gap-2.5">
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-green/10 text-base"
+          aria-hidden="true"
+        >
+          {emoji}
+        </span>
+        <h3 className="text-[11px] font-semibold uppercase tracking-[0.09em] text-primary-green">
+          {title}
+        </h3>
+      </div>
+      <p className="mt-3 text-sm leading-relaxed text-slate-600">{body}</p>
+    </section>
+  )
+}
+
+// ── Language selector ───────────────────────────────────────────────────────
+
+/**
+ * Compact, rounded language dropdown with a small circular flag badge and soft
+ * shadow. A native <select> keeps it fully accessible and mobile-friendly while
+ * matching the page's slate/green palette and spacing.
+ */
+function LanguageSelector({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: LanguageCode
+  onChange: (next: LanguageCode) => void
+  disabled?: boolean
+}) {
+  const active = LANGUAGES.find((l) => l.code === value) ?? LANGUAGES[0]
+
+  return (
+    <label
+      className={[
+        'group relative flex items-center gap-1.5 rounded-full border border-slate-200 bg-white pl-1 pr-6 shadow-sm transition-colors',
+        disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-slate-300',
+      ].join(' ')}
+    >
+      {/* Circular flag badge */}
+      <span
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-50 text-sm leading-none ring-1 ring-inset ring-slate-100"
+        aria-hidden="true"
+      >
+        {active.flag}
+      </span>
+      <span className="text-xs font-medium text-slate-600">{active.label}</span>
+
+      {/* The real control fills the label so the whole chip is clickable. */}
+      <select
+        aria-label="Recommendation language"
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value as LanguageCode)}
+        className="absolute inset-0 h-full w-full cursor-[inherit] appearance-none rounded-full bg-transparent text-transparent opacity-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
+      >
+        {LANGUAGES.map((l) => (
+          <option key={l.code} value={l.code} className="text-slate-900">
+            {l.flag} {l.label}
+          </option>
+        ))}
+      </select>
+
+      {/* Chevron */}
+      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400">
+        {ChevronIcon}
+      </span>
+    </label>
+  )
+}
 
 // ── Loading skeleton (mirrors the result card) ──────────────────────────────
 

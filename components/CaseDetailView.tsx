@@ -199,7 +199,7 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
         {/* Right column: Action form */}
         <div className="space-y-6">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
-            <h3 className="text-base font-bold text-slate-900">Expert Action Panel</h3>
+            <h3 className="text-base font-bold text-slate-900">Rythu Seva Kendra Action Panel</h3>
             <p className="mt-1.5 text-xs text-slate-500">
               Provide feedback and mark this case as verified or resolved. Farmers will see your notes immediately on their dashboard.
             </p>

@@ -15,11 +15,23 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabaseServer'
 import { getViableCrops } from '@/lib/cropLookup'
 import { getCropRecommendation } from '@/lib/gemini'
+import { translateText } from '@/lib/googleCloud'
 import { fetchWeatherSummary } from '@/lib/weather'
 import { SOIL_TYPES } from '@/lib/constants'
 
 /** Valid soil ids, derived from the shared constant so the two never drift. */
 const VALID_SOIL_IDS = new Set<string>(SOIL_TYPES.map((soil) => soil.id))
+
+/** Languages the recommendation fields can be translated into. */
+type TargetLang = 'en' | 'hi' | 'te' | 'mr'
+const TRANSLATABLE_LANGS = new Set<TargetLang>(['en', 'hi', 'te', 'mr'])
+
+/** Narrow an untrusted body value to a supported language, defaulting to 'en'. */
+function parseTargetLang(raw: unknown): TargetLang {
+  return typeof raw === 'string' && TRANSLATABLE_LANGS.has(raw as TargetLang)
+    ? (raw as TargetLang)
+    : 'en'
+}
 
 type Season = 'kharif' | 'rabi' | 'summer'
 
@@ -42,43 +54,143 @@ function errorResponse(message: string, status: number) {
 }
 
 export async function POST(request: Request) {
+  return handleRecommendationGeneration(request, false)
+}
+
+export async function handleRecommendationGeneration(request: Request, isTestRoute = false) {
+  console.log("USING UPDATED ROUTE")
   try {
-    // ── 1. Parse + validate body ──────────────────────────────────────────
-    let body: unknown
-    try {
-      body = await request.json()
-    } catch {
-      return errorResponse('Request body must be valid JSON.', 400)
+    const isDev = process.env.NODE_ENV === 'development'
+
+    if (isTestRoute && !isDev) {
+      console.log({ location: "route.ts line 56", isTestRoute, isDev })
+      return errorResponse('Method Not Allowed', 405)
     }
 
-    const { district_id, soil_type } = (body ?? {}) as {
+    // ── 1. Parse + validate body ──────────────────────────────────────────
+    let body: unknown = {}
+    if (!isTestRoute) {
+      try {
+        body = await request.json()
+      } catch {
+        if (!isDev) {
+          console.log({ location: "route.ts line 68", isDev })
+          return errorResponse('Request body must be valid JSON.', 400)
+        }
+      }
+    }
+
+    if (isDev) {
+      console.log('Incoming request:', {
+        url: request.url,
+        method: request.method,
+        body,
+      })
+      console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+    }
+
+    const { district_id, soil_type, target_lang } = (body ?? {}) as {
       district_id?: unknown
       soil_type?: unknown
+      target_lang?: unknown
     }
 
-    if (typeof district_id !== 'string' || district_id.trim() === '') {
-      return errorResponse('`district_id` is required and must be a non-empty string.', 400)
-    }
-    if (typeof soil_type !== 'string' || soil_type.trim() === '') {
-      return errorResponse('`soil_type` is required and must be a non-empty string.', 400)
+    // Optional multilingual support; anything unrecognised falls back to English.
+    const targetLang = parseTargetLang(target_lang)
+
+    let finalDistrictId = typeof district_id === 'string' ? district_id.trim() : ''
+    let finalSoilType = typeof soil_type === 'string' ? soil_type.trim() : ''
+
+    const supabase = await createServerSupabaseClient()
+
+    if (isDev) {
+      if (isTestRoute || !finalSoilType || !VALID_SOIL_IDS.has(finalSoilType)) {
+        finalSoilType = SOIL_TYPES[0]?.id ?? ''
+      }
+      if (isTestRoute || !finalDistrictId) {
+        // Fetch first district
+        console.log("PRE-QUERY: Querying first district...")
+        const result = await supabase
+          .from("districts")
+          .select("*")
+          .limit(1)
+
+        console.log("First district query result:", result)
+
+        const firstDistrict = result.data
+        const firstDistrictErr = result.error
+
+        console.log({
+          location: "route.ts line 115 (first district query result)",
+          firstDistrict,
+          firstDistrictErr
+        })
+
+        if (firstDistrictErr) {
+          console.log({ location: "route.ts line 121 (firstDistrictErr exists)", firstDistrictErr })
+          return NextResponse.json({
+            success: false,
+            location: "first district query",
+            error: firstDistrictErr.message,
+            code: firstDistrictErr.code,
+            details: firstDistrictErr.details,
+            hint: firstDistrictErr.hint
+          }, { status: 500 })
+        }
+
+        if (!firstDistrict || firstDistrict.length === 0) {
+          console.log({ location: "route.ts line 133 (firstDistrict empty)", firstDistrict })
+          return errorResponse('Database contains no districts.', 400)
+        }
+        finalDistrictId = firstDistrict[0].id
+      }
     }
 
-    const soilType = soil_type.trim()
-    if (!VALID_SOIL_IDS.has(soilType)) {
-      return errorResponse(
-        `Invalid soil type "${soilType}". Expected one of: ${[...VALID_SOIL_IDS].join(', ')}.`,
-        400,
-      )
+    if (isDev) {
+      console.log('Selected district:', finalDistrictId)
+      console.log('Selected soil type:', finalSoilType)
+    }
+
+    if (!finalDistrictId) {
+      console.log({ location: "route.ts line 146", finalDistrictId })
+      return errorResponse('Missing required field: district_id', 400)
+    }
+    if (!finalSoilType) {
+      console.log({ location: "route.ts line 150", finalSoilType })
+      return errorResponse('Missing required field: soil_type', 400)
+    }
+    if (!VALID_SOIL_IDS.has(finalSoilType)) {
+      console.log({ location: "route.ts line 154", finalSoilType })
+      return errorResponse('Invalid soil_type.', 400)
     }
 
     // ── 2. Authenticate (user id comes from the session, never the body) ──
-    const supabase = await createServerSupabaseClient()
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
+    let userId = ''
+    let currentUser: unknown = null
+    if (isTestRoute && isDev) {
+      userId = '00000000-0000-0000-0000-000000000000'
+      currentUser = { id: userId, email: 'dev@kisan-alert.local', role: 'dev' }
+    } else {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
 
-    if (authError || !user) {
+      if (!isDev && (authError || !user)) {
+        console.log({ location: "route.ts line 170 (auth required in prod)", authError, user })
+        return errorResponse('You must be logged in to request a recommendation.', 401)
+      }
+
+      userId = user?.id ?? (isDev ? '00000000-0000-0000-0000-000000000000' : '')
+      currentUser = user
+    }
+
+    if (isDev) {
+      console.log('Current user:', JSON.stringify(currentUser))
+    }
+
+    if (!userId) {
+      console.log({ location: "route.ts line 183", userId })
       return errorResponse('You must be logged in to request a recommendation.', 401)
     }
 
@@ -86,24 +198,53 @@ export async function POST(request: Request) {
     const { data: district, error: districtError } = await supabase
       .from('districts')
       .select('name, latitude, longitude')
-      .eq('id', district_id.trim())
+      .eq('id', finalDistrictId)
       .single<DistrictRow>()
 
-    if (districtError || !district) {
+    if (isDev) {
+      console.log('District query result:', JSON.stringify(district))
+      console.log('District query error:', JSON.stringify(districtError))
+    }
+
+    if (districtError) {
+      if (districtError.code === 'PGRST116') {
+        const { count, error: countErr } = await supabase
+          .from('districts')
+          .select('*', { count: 'exact', head: true })
+
+        if (countErr) {
+          console.log({ location: "route.ts line 208", countErr })
+          return errorResponse(`Supabase query failed: ${countErr.message}`, 500)
+        }
+        if (count === 0) {
+          console.log({ location: "route.ts line 212", count })
+          return errorResponse('Database contains no districts.', 400)
+        }
+        console.log({ location: "route.ts line 215", districtError })
+        return errorResponse('District not found.', 404)
+      }
+      console.log({ location: "route.ts line 218", districtError })
+      return errorResponse(`Supabase query failed: ${districtError.message}`, 500)
+    }
+
+    if (!district) {
+      console.log({ location: "route.ts line 223", district })
       return errorResponse('District not found.', 404)
     }
     if (district.latitude === null || district.longitude === null) {
+      console.log({ location: "route.ts line 227", district })
       return errorResponse('District is missing location coordinates.', 422)
     }
 
     // ── 4. Season + viable crops ──────────────────────────────────────────
     const month = new Date().getMonth() + 1
     const season = getSeasonForMonth(month)
-    const viableCrops = [...getViableCrops(soilType, season)]
+    const viableCrops = [...getViableCrops(finalSoilType, season)]
 
     if (viableCrops.length === 0) {
+      console.log({ location: "route.ts line 237", finalSoilType, season, viableCrops })
       return errorResponse(
-        `No viable crops are available for ${soilType} soil during the ${season} season.`,
+        `No viable crops are available for ${finalSoilType} soil during the ${season} season.`,
         422,
       )
     }
@@ -114,22 +255,41 @@ export async function POST(request: Request) {
       district.longitude,
     )
 
+    if (isDev) {
+      console.log('Weather summary:', JSON.stringify(weatherSummary))
+      console.log('Gemini input:', JSON.stringify({
+        soilType: finalSoilType,
+        districtName: district.name,
+        season,
+        viableCrops,
+        weatherSummary,
+      }))
+    }
+
     // ── 6. Gemini recommendation (never throws) ───────────────────────────
     const recommendation = await getCropRecommendation(
-      soilType,
+      finalSoilType,
       district.name,
       season,
       viableCrops,
       weatherSummary,
     )
 
+    if (isDev) {
+      console.log('Gemini output:', JSON.stringify(recommendation))
+    }
+
     // ── 7. Persist (best-effort; a write failure must not lose the result) ─
     const { error: insertError } = await supabase.from('recommendations').insert({
-      user_id: user.id,
+      user_id: userId,
       crop_name: recommendation.crop_name,
       reasoning: recommendation.reasoning,
       confidence_score: recommendation.confidence_score,
     })
+
+    if (isDev) {
+      console.log('Insert result:', JSON.stringify({ error: insertError }))
+    }
 
     if (insertError) {
       console.error('Failed to save recommendation:', insertError.message)
@@ -140,24 +300,52 @@ export async function POST(request: Request) {
     // one; only `district_id` is written, so name/role/soil_type are untouched.
     const { error: districtSaveError } = await supabase
       .from('users')
-      .upsert({ id: user.id, district_id: district_id.trim() }, { onConflict: 'id' })
+      .upsert({ id: userId, district_id: finalDistrictId }, { onConflict: 'id' })
+
+    if (isDev) {
+      console.log('User update result:', JSON.stringify({ error: districtSaveError }))
+    }
 
     if (districtSaveError) {
       console.error('Failed to save user district:', districtSaveError.message)
     }
 
-    // ── 8. Respond ────────────────────────────────────────────────────────
+    // ── 8. Translate advisory fields (optional; English is the base) ──────
+    // Only reasoning / fertilization_tip / irrigation_advice are translated.
+    // crop_name, confidence_score, and is_dry_spell always stay in English.
+    // translateText() never throws — it returns the original text on failure —
+    // so a translation problem simply yields English values, never a crash.
+    let translated:
+      | { reasoning: string; fertilization_tip: string; irrigation_advice: string }
+      | undefined
+
+    if (targetLang !== 'en') {
+      const [reasoning, fertilization_tip, irrigation_advice] = await Promise.all([
+        translateText(recommendation.reasoning, targetLang),
+        translateText(recommendation.fertilization_tip, targetLang),
+        translateText(recommendation.irrigation_advice, targetLang),
+      ])
+      translated = { reasoning, fertilization_tip, irrigation_advice }
+    }
+
+    // ── 9. Respond ────────────────────────────────────────────────────────
+    console.log({ location: "route.ts success respond block", recommendation })
     return NextResponse.json({
       crop_name: recommendation.crop_name,
       reasoning: recommendation.reasoning,
       confidence_score: recommendation.confidence_score,
+      fertilization_tip: recommendation.fertilization_tip,
+      irrigation_advice: recommendation.irrigation_advice,
       is_dry_spell: weatherSummary.isDrySpell,
+      // Present only when a non-English language was requested.
+      ...(translated ? { translated } : {}),
       ...(recommendation.error ? { error: recommendation.error } : {}),
     })
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Unexpected server error.'
     console.error('Recommendation route error:', message)
+    console.log({ location: "route.ts line 324 catch block", error })
     return errorResponse('Something went wrong while generating the recommendation.', 500)
   }
 }

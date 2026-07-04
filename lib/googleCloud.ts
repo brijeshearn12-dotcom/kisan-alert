@@ -111,9 +111,9 @@ export async function synthesizeSpeech(
  * Transcribe Base64-encoded WEBM/Opus audio using Google Cloud Speech-to-Text
  * v1 (synchronous recognize).
  *
- * Primary language defaults to Hindi with Telugu/Marathi/English as automatic
- * alternatives. Returns the best transcript, or "" when the key is missing or
- * on ANY failure.
+ * Primary language defaults to English (Indian accent) with Hindi, Telugu, and
+ * Marathi as automatic alternatives. Returns the best transcript, or "" when
+ * the key is missing or on ANY failure.
  */
 export async function transcribeSpeech(
   audioBase64: string,
@@ -125,10 +125,10 @@ export async function transcribeSpeech(
   try {
     // Recorder output from the browser MediaRecorder is 48kHz WEBM_OPUS.
     const config = {
-      encoding: 'WEBM_OPUS',
+      encoding: 'WEBM_OPUS' as const,
       sampleRateHertz: 48000,
-      languageCode: languageCode || 'hi-IN',
-      alternativeLanguageCodes: ['te-IN', 'mr-IN', 'en-IN'],
+      languageCode: languageCode || 'en-IN',
+      alternativeLanguageCodes: ['hi-IN', 'te-IN', 'mr-IN'],
     }
 
     const response = await fetch(

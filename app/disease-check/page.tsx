@@ -9,6 +9,7 @@ import { EntranceAnimation } from '@/components/EntranceAnimation'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { ListenButton } from '@/components/ListenButton'
+import { VoiceInput } from '@/components/VoiceInput'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -116,6 +117,7 @@ export default function DiseaseCheckPage() {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [diagnosisResult, setDiagnosisResult] = useState<DiseaseCheckResponse | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [voiceDescription, setVoiceDescription] = useState<string>('')
 
   // Status message rotation during the analysis phase
   const [analysisStatus, setAnalysisStatus] = useState('Uploading image...')
@@ -204,7 +206,42 @@ export default function DiseaseCheckPage() {
     setImageUrl(null)
     setDiagnosisResult(null)
     setErrorMsg(null)
+    setVoiceDescription('')
     setScreenState('ready')
+  }
+
+  async function handleVoiceDiagnosis() {
+    if (!voiceDescription.trim()) return
+
+    setScreenState('analyzing')
+    setAnalysisStatus('Analyzing your description with AI...')
+    setErrorMsg(null)
+
+    try {
+      const response = await fetch('/api/disease-checks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voice_description: voiceDescription }),
+      })
+
+      const data = (await response.json()) as DiseaseCheckResponse
+
+      if (!response.ok) {
+        throw new Error(data.error ?? 'Failed to analyze crop description.')
+      }
+
+      setDiagnosisResult(data)
+
+      if (data.escalated || (data.confidence_score !== undefined && data.confidence_score < 0.6)) {
+        setScreenState('escalated')
+      } else {
+        setScreenState('success')
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'A network error occurred. Please try again.'
+      setErrorMsg(message)
+      setScreenState('error')
+    }
   }
 
   return (
@@ -234,7 +271,7 @@ export default function DiseaseCheckPage() {
             AI Disease Diagnosis
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-slate-500">
-            Upload a high-quality photo of your affected plant leaf to receive an instant diagnosis, treatment details, and Rythu Seva Kendra review.
+            Upload a photo of your affected plant leaf, or describe the symptoms using your voice, to receive an instant diagnosis, treatment details, and Rythu Seva Kendra review.
           </p>
         </header>
 
@@ -289,11 +326,43 @@ export default function DiseaseCheckPage() {
                   setScreenState('error')
                 }}
               />
+
+              {/* OR divider */}
+              {!imageUrl && (
+                <>
+                  <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                      <div className="w-full border-t border-slate-200" />
+                    </div>
+                    <div className="relative flex justify-center">
+                      <span className="bg-slate-50 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        Or describe the problem
+                      </span>
+                    </div>
+                  </div>
+
+                  <VoiceInput onTranscript={(text) => setVoiceDescription(text)} />
+
+                  {voiceDescription.trim() !== '' && (
+                    <button
+                      type="button"
+                      onClick={handleVoiceDiagnosis}
+                      className="mt-4 flex w-full h-11 items-center justify-center gap-2 rounded-xl bg-primary-green px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-green/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
+                    >
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m22 2-7 20-4-9-9-4z" />
+                        <path d="M22 2 11 13" />
+                      </svg>
+                      Diagnose from Description
+                    </button>
+                  )}
+                </>
+              )}
             </EntranceAnimation>
           )}
 
           {/* 4. Analyzing State */}
-          {screenState === 'analyzing' && imageUrl && (
+          {screenState === 'analyzing' && (imageUrl || voiceDescription) && (
             <motion.div
               key="analyzing"
               initial={{ opacity: 0 }}
@@ -302,22 +371,27 @@ export default function DiseaseCheckPage() {
               className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
             >
               <div className="relative aspect-[4/3] w-full bg-slate-900">
-                {/* Image under scanner */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={imageUrl}
-                  alt="Analyzing leaf upload"
-                  className="h-full w-full object-cover opacity-60 filter blur-[1px]"
-                />
+                {imageUrl ? (
+                  <>
+                    {/* Image under scanner */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imageUrl}
+                      alt="Analyzing leaf upload"
+                      className="h-full w-full object-cover opacity-60 filter blur-[1px]"
+                    />
 
-                {/* Laser scan animation overlay */}
-                <motion.div
-                  className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_12px_rgba(52,211,153,0.8)]"
-                  initial={{ top: '0%' }}
-                  animate={{ top: ['0%', '100%', '0%'] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                />
-
+                    {/* Laser scan animation overlay */}
+                    <motion.div
+                      className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_12px_rgba(52,211,153,0.8)]"
+                      initial={{ top: '0%' }}
+                      animate={{ top: ['0%', '100%', '0%'] }}
+                      transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                    />
+                  </>
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-br from-slate-800 to-slate-900" />
+                )}
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/40 p-6 text-center">
                   <div className="rounded-full bg-primary-green/10 p-4 ring-1 ring-primary-green/20 backdrop-blur-md">
                     <span className="flex h-3 w-3 relative">
@@ -336,26 +410,44 @@ export default function DiseaseCheckPage() {
             </motion.div>
           )}
 
-          {/* 5. Diagnosis Result (Success) */}
-          {screenState === 'success' && diagnosisResult && imageUrl && (
+          {/* 5. Diagnosis Result (Success) — from image OR voice */}
+          {screenState === 'success' && diagnosisResult && (imageUrl || voiceDescription) && (
             <EntranceAnimation
               key="success"
               exit={{ opacity: 0 }}
               className="space-y-6"
             >
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="relative aspect-[16/9] w-full bg-slate-100 border-b border-slate-100">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={imageUrl}
-                    alt="Diagnosed plant leaf"
-                    className="h-full w-full object-cover"
-                  />
-                  <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-primary-green px-3 py-1 text-xs font-semibold text-white shadow-sm">
-                    {CheckIcon}
-                    Analysis Completed
+                {imageUrl && (
+                  <div className="relative aspect-[16/9] w-full bg-slate-100 border-b border-slate-100">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imageUrl}
+                      alt="Diagnosed plant leaf"
+                      className="h-full w-full object-cover"
+                    />
+                    <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-primary-green px-3 py-1 text-xs font-semibold text-white shadow-sm">
+                      {CheckIcon}
+                      Analysis Completed
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {!imageUrl && voiceDescription && (
+                  <div className="border-b border-slate-100 bg-primary-green/5 p-4">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-green/10 text-primary-green">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                          <line x1="12" x2="12" y1="19" y2="22" />
+                        </svg>
+                      </span>
+                      <span className="text-xs font-semibold text-primary-green uppercase tracking-wider">Voice Diagnosis</span>
+                    </div>
+                    <p className="mt-2 text-xs italic text-slate-500 line-clamp-2">&ldquo;{voiceDescription}&rdquo;</p>
+                  </div>
+                )}
 
                 <div className="p-5 sm:p-6">
                   {/* Title and Badge */}
@@ -409,25 +501,39 @@ export default function DiseaseCheckPage() {
           )}
 
           {/* 6. Escalated to Expert State */}
-          {screenState === 'escalated' && diagnosisResult && imageUrl && (
+          {screenState === 'escalated' && diagnosisResult && (imageUrl || voiceDescription) && (
             <EntranceAnimation
               key="escalated"
               exit={{ opacity: 0 }}
               className="space-y-6"
             >
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="relative aspect-[16/9] w-full bg-slate-100 border-b border-slate-100">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={imageUrl}
-                    alt="Escalated plant leaf"
-                    className="h-full w-full object-cover"
-                  />
-                  <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-accent-amber px-3 py-1 text-xs font-semibold text-white shadow-sm">
-                    {ShieldAlertIcon}
-                    Case Submitted
+                {imageUrl && (
+                  <div className="relative aspect-[16/9] w-full bg-slate-100 border-b border-slate-100">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imageUrl}
+                      alt="Escalated plant leaf"
+                      className="h-full w-full object-cover"
+                    />
+                    <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-accent-amber px-3 py-1 text-xs font-semibold text-white shadow-sm">
+                      {ShieldAlertIcon}
+                      Case Submitted
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {!imageUrl && voiceDescription && (
+                  <div className="border-b border-slate-100 bg-accent-amber/5 p-4">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-amber/10 text-accent-amber">
+                        {ShieldAlertIcon}
+                      </span>
+                      <span className="text-xs font-semibold text-accent-amber uppercase tracking-wider">Voice Diagnosis — Case Submitted</span>
+                    </div>
+                    <p className="mt-2 text-xs italic text-slate-500 line-clamp-2">&ldquo;{voiceDescription}&rdquo;</p>
+                  </div>
+                )}
 
                 <div className="p-5 sm:p-6">
                   <div>

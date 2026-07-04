@@ -15,7 +15,8 @@
 import { NextResponse } from 'next/server'
 import { randomUUID } from 'node:crypto'
 import { createServerSupabaseClient } from '@/lib/supabaseServer'
-import { getDiseaseDiagnosis } from '@/lib/gemini'
+import { getDiseaseDiagnosis, getDiseaseDiagnosisFromText } from '@/lib/gemini'
+import { normalizeTranscript } from '@/utils/normalizeTranscript'
 
 /** A case is opened for expert review when confidence falls below this value. */
 const LOW_CONFIDENCE_THRESHOLD = 0.6
@@ -76,13 +77,84 @@ export async function POST(request: Request) {
       return errorResponse('Request body must be valid JSON.', 400)
     }
 
-    const { image_url, crop_type } = (body ?? {}) as {
+    const { image_url, crop_type, voice_description } = (body ?? {}) as {
       image_url?: unknown
       crop_type?: unknown
+      voice_description?: unknown
     }
 
+    // ── 2b. Voice/text description path (no image required) ─────────────
+    if (
+      (typeof image_url !== 'string' || image_url.trim() === '') &&
+      typeof voice_description === 'string' &&
+      voice_description.trim() !== ''
+    ) {
+      const cleanedText = normalizeTranscript(voice_description.trim())
+      const textResult = await getDiseaseDiagnosisFromText(cleanedText)
+
+      // Gemini fallback → return cleanly, no DB write, no escalation
+      if (textResult.error || textResult.diagnosis === null) {
+        return NextResponse.json({
+          diagnosis: textResult.diagnosis,
+          confidence_score: textResult.confidence_score,
+          treatment_advice: textResult.treatment_advice,
+          escalated: false,
+          case_id: null,
+          disease_check_id: null,
+          ...(textResult.error ? { error: textResult.error } : {}),
+        })
+      }
+
+      // Persist the text-based diagnosis (image_url is null for voice path)
+      const { data: check, error: checkError } = await supabase
+        .from('disease_checks')
+        .insert({
+          user_id: user.id,
+          image_url: null,
+          diagnosis: textResult.diagnosis,
+          confidence_score: textResult.confidence_score,
+          treatment_advice: textResult.treatment_advice,
+        })
+        .select('id')
+        .single<{ id: string }>()
+
+      if (checkError || !check) {
+        console.error('disease_checks insert error (voice path):', checkError)
+        return errorResponse('Could not save the disease check.', 500)
+      }
+
+      // Escalate low-confidence results
+      let caseId: string | null = null
+      if (textResult.confidence_score < LOW_CONFIDENCE_THRESHOLD) {
+        const generatedCaseId = randomUUID()
+        const { error: caseError } = await supabase
+          .from('cases')
+          .insert({
+            id: generatedCaseId,
+            disease_check_id: check.id,
+            status: 'pending',
+          })
+
+        if (caseError) {
+          console.error('cases insert error (voice path):', caseError)
+          return errorResponse('Could not escalate the diagnosis for expert review.', 500)
+        }
+        caseId = generatedCaseId
+      }
+
+      return NextResponse.json({
+        diagnosis: textResult.diagnosis,
+        confidence_score: textResult.confidence_score,
+        treatment_advice: textResult.treatment_advice,
+        escalated: caseId !== null,
+        case_id: caseId,
+        disease_check_id: check.id,
+      })
+    }
+
+    // ── 2c. Image path — validate image_url ─────────────────────────────
     if (typeof image_url !== 'string' || image_url.trim() === '') {
-      return errorResponse('`image_url` is required and must be a non-empty string.', 400)
+      return errorResponse('`image_url` or `voice_description` is required.', 400)
     }
 
     const cloudName =

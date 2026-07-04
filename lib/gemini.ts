@@ -450,3 +450,103 @@ export async function getDiseaseDiagnosis(
     return DIAGNOSIS_FALLBACK
   }
 }
+
+// ── Text-based disease diagnosis ─────────────────────────────────────────────
+
+const TEXT_DIAGNOSIS_SYSTEM_INSTRUCTION =
+  'You are a senior plant pathologist. ' +
+  'You assist smallholder farmers in India. ' +
+  'A farmer will describe their crop issue in plain language. ' +
+  'The input is derived from speech-to-text and may contain minor transcription errors ' +
+  '(e.g., "Mike" instead of "My", "mite" instead of "my", misspelled crop names). ' +
+  'Ignore spelling mistakes and focus on the agricultural meaning. ' +
+  'Based on the description alone, provide your best diagnosis. ' +
+  'Be conservative with your confidence score — text descriptions ' +
+  'are inherently less reliable than images.'
+
+/**
+ * Build the prompt for a text-only diagnosis from a farmer's description.
+ */
+function buildTextDiagnosisPrompt(description: string): string {
+  return [
+    'A farmer described their crop issue (transcribed from speech — minor errors possible):',
+    '',
+    `"${description}"`,
+    '',
+    'Focus on the agricultural meaning. Ignore minor spelling or transcription errors.',
+    '',
+    'Score CONSERVATIVELY. Lower your confidence if:',
+    '- the description is vague',
+    '- multiple diseases are plausible',
+    '- key details (crop type, duration, spread) are missing.',
+    '',
+    'Respond with ONLY valid JSON (no markdown, no code fences, no commentary) in exactly this shape:',
+    '{"diagnosis": "<disease name or condition>", "confidence_score": <number between 0 and 1>, "treatment_advice": "<2-3 sentences, use locally available remedies like neem, urea, fungicide etc.>"}',
+  ].join('\n')
+}
+
+/**
+ * Diagnose a plant disease from a farmer's text description using Gemini.
+ *
+ * Always resolves — never throws. On any failure it returns
+ * {@link DIAGNOSIS_FALLBACK} with `error: "ai_unavailable"`.
+ */
+export async function getDiseaseDiagnosisFromText(
+  description: string,
+): Promise<DiseaseDiagnosis> {
+  if (!description.trim()) {
+    return {
+      diagnosis: 'Unable to determine',
+      confidence_score: 0,
+      treatment_advice: 'Please consult local agricultural officer.',
+    }
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY?.trim()
+  if (!apiKey) return DIAGNOSIS_FALLBACK
+
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({
+      model: MODEL_NAME,
+      systemInstruction: TEXT_DIAGNOSIS_SYSTEM_INSTRUCTION,
+      generationConfig: {
+        responseMimeType: 'application/json',
+        temperature: 0.3,
+      },
+    })
+
+    const prompt = buildTextDiagnosisPrompt(description)
+
+    const result = await Promise.race([
+      model.generateContent(prompt),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error('Gemini request timed out.')),
+          REQUEST_TIMEOUT_MS,
+        ),
+      ),
+    ])
+
+    const text = result.response.text()
+
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(stripCodeFences(text))
+    } catch (parseErr) {
+      console.error('JSON parse error in text diagnosis:', parseErr, 'Raw:', text)
+      return DIAGNOSIS_FALLBACK
+    }
+
+    const normalized = normalizeDiagnosisOutput(parsed)
+    if (!normalized) {
+      console.error('Normalization failed for text diagnosis output:', parsed)
+      return DIAGNOSIS_FALLBACK
+    }
+
+    return normalized
+  } catch (err) {
+    console.error('Gemini SDK error in getDiseaseDiagnosisFromText:', err)
+    return DIAGNOSIS_FALLBACK
+  }
+}

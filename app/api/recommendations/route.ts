@@ -11,6 +11,7 @@
  * escape: unexpected failures become a 500 with a clear `error` message.
  * -----------------------------------------------------------------------------
  */
+export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabaseServer'
 import { getViableCrops } from '@/lib/cropLookup'

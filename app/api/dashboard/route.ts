@@ -18,6 +18,8 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabaseServer'
 import { fetchCurrentWeather, type CurrentWeather } from '@/lib/weather'
 
+export const dynamic = 'force-dynamic'
+
 /** Consecutive rain-free days that constitute a dry spell. */
 const DRY_SPELL_DAYS = 5
 

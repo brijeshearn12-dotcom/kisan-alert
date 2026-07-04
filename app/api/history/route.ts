@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabaseServer'
 
+export const dynamic = 'force-dynamic'
+
 interface RecommendationRow {
   id: string
   crop_name: string | null

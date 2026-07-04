@@ -16,6 +16,8 @@ import { NextResponse } from 'next/server'
 import { v2 as cloudinary } from 'cloudinary'
 import { createServerSupabaseClient } from '@/lib/supabaseServer'
 
+export const dynamic = 'force-dynamic'
+
 /** Small helper for consistent JSON error responses. */
 function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status })

@@ -198,11 +198,15 @@ export default function RecommendationPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [language, setLanguage] = useState<LanguageCode>('en')
 
-  // Restore the saved language preference once on mount (Task 4). Runs only in
-  // the browser, so it never touches SSR and defaults to 'en' when unset.
+  // Restore the saved language preference once on mount (Task 4). This must run
+  // in an effect — not a lazy useState initializer — because localStorage does
+  // not exist during SSR, so initializing from it would cause a hydration
+  // mismatch. Server + first client render use 'en', then we sync to the saved
+  // value. The set-state-in-effect rule is intentionally suppressed here.
   useEffect(() => {
     const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY)
     if (isLanguageCode(saved)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing persisted client-only preference post-hydration
       setLanguage(saved)
     }
   }, [])

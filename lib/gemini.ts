@@ -182,14 +182,31 @@ export async function getCropRecommendation(
   season: string,
   viableCrops: string[],
   weatherSummary: WeatherSummary,
+  soilMoisture: number = 50,
 ): Promise<CropRecommendation> {
   if (viableCrops.length === 0) {
-    return buildFallback(viableCrops, 'No viable crops were supplied.')
+    const fallback = buildFallback(viableCrops, 'No viable crops were supplied.')
+    if (soilMoisture < 30) {
+      fallback.irrigation_advice += " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
+    } else if (soilMoisture <= 60) {
+      fallback.irrigation_advice += " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
+    } else {
+      fallback.irrigation_advice += " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
+    }
+    return fallback
   }
 
   const apiKey = process.env.GEMINI_API_KEY?.trim()
   if (!apiKey) {
-    return buildFallback(viableCrops, 'GEMINI_API_KEY is not configured.')
+    const fallback = buildFallback(viableCrops, 'GEMINI_API_KEY is not configured.')
+    if (soilMoisture < 30) {
+      fallback.irrigation_advice += " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
+    } else if (soilMoisture <= 60) {
+      fallback.irrigation_advice += " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
+    } else {
+      fallback.irrigation_advice += " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
+    }
+    return fallback
   }
 
   try {
@@ -228,25 +245,56 @@ export async function getCropRecommendation(
     try {
       parsed = JSON.parse(stripCodeFences(text))
     } catch {
-      return buildFallback(
+      const fallback = buildFallback(
         viableCrops,
         'Gemini returned a response that was not valid JSON.',
       )
+      if (soilMoisture < 30) {
+        fallback.irrigation_advice += " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
+      } else if (soilMoisture <= 60) {
+        fallback.irrigation_advice += " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
+      } else {
+        fallback.irrigation_advice += " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
+      }
+      return fallback
     }
 
     const normalized = normalizeModelOutput(parsed, viableCrops)
     if (!normalized) {
-      return buildFallback(
+      const fallback = buildFallback(
         viableCrops,
         'Gemini returned a malformed or out-of-list recommendation.',
       )
+      if (soilMoisture < 30) {
+        fallback.irrigation_advice += " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
+      } else if (soilMoisture <= 60) {
+        fallback.irrigation_advice += " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
+      } else {
+        fallback.irrigation_advice += " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
+      }
+      return fallback
     }
 
+    if (soilMoisture < 30) {
+      normalized.irrigation_advice += " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
+    } else if (soilMoisture <= 60) {
+      normalized.irrigation_advice += " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
+    } else {
+      normalized.irrigation_advice += " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
+    }
     return normalized
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Unknown Gemini error.'
-    return buildFallback(viableCrops, message)
+    const fallback = buildFallback(viableCrops, message)
+    if (soilMoisture < 30) {
+      fallback.irrigation_advice += " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
+    } else if (soilMoisture <= 60) {
+      fallback.irrigation_advice += " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
+    } else {
+      fallback.irrigation_advice += " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
+    }
+    return fallback
   }
 }
 

@@ -90,11 +90,14 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
       console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
     }
 
-    const { district_id, soil_type, target_lang } = (body ?? {}) as {
+    const { district_id, soil_type, target_lang, soil_moisture_pct } = (body ?? {}) as {
       district_id?: unknown
       soil_type?: unknown
       target_lang?: unknown
+      soil_moisture_pct?: unknown
     }
+
+    const soilMoisture = typeof soil_moisture_pct === 'number' ? soil_moisture_pct : 50
 
     // Optional multilingual support; anything unrecognised falls back to English.
     const targetLang = parseTargetLang(target_lang)
@@ -267,13 +270,13 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
       }))
     }
 
-    // ── 6. Gemini recommendation (never throws) ───────────────────────────
     const recommendation = await getCropRecommendation(
       finalSoilType,
       district.name,
       season,
       viableCrops,
       weatherSummary,
+      soilMoisture,
     )
 
     if (isDev) {

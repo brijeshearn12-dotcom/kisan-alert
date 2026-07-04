@@ -18,6 +18,7 @@ import {
   type ProfileRow,
   type Status,
 } from './ui'
+import SoilMoistureSlider from '@/components/SoilMoistureSlider'
 
 export default function DashboardPage() {
   const supabase = useMemo(() => createClient(), [])
@@ -29,6 +30,7 @@ export default function DashboardPage() {
   const [fetchedAt, setFetchedAt] = useState<Date | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [signingOut, setSigningOut] = useState(false)
+  const [soilMoisture, setSoilMoisture] = useState(50)
 
   useEffect(() => {
     let active = true
@@ -53,7 +55,7 @@ export default function DashboardPage() {
             .select('name, role, districts(name)')
             .eq('id', user.id)
             .single<ProfileRow>(),
-          fetch('/api/dashboard', { cache: 'no-store' }),
+          fetch(`/api/dashboard?soil_moisture_pct=${soilMoisture}`, { cache: 'no-store' }),
         ])
 
         if (!active) return
@@ -80,7 +82,7 @@ export default function DashboardPage() {
     return () => {
       active = false
     }
-  }, [supabase, router, reloadKey])
+  }, [supabase, router, reloadKey, soilMoisture])
 
   async function handleSignOut() {
     setSigningOut(true)
@@ -110,6 +112,8 @@ export default function DashboardPage() {
             <WelcomeHeader name={profile?.name ?? null} district={profile?.district ?? null} />
 
             <WeatherCard weather={data.weather} fetchedAt={fetchedAt} />
+
+            <SoilMoistureSlider value={soilMoisture} onChange={setSoilMoisture} />
 
             {data.is_dry_spell && <DrySpellBanner />}
 

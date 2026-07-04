@@ -8,6 +8,7 @@ import { confidenceStyle } from '@/lib/confidence'
 import { EntranceAnimation } from '@/components/EntranceAnimation'
 import { EmptyState } from '@/components/EmptyState'
 import { ListenButton } from '@/components/ListenButton'
+import SatelliteMap from '@/components/SatelliteMap'
 
 function langToLanguageCode(
   lang: 'en' | 'hi' | 'te' | 'mr'
@@ -31,6 +32,8 @@ function langToLanguageCode(
 interface District {
   id: string
   name: string
+  latitude: number | null
+  longitude: number | null
 }
 
 /** Translated copies of the advisory fields; present only for non-English. */
@@ -211,6 +214,10 @@ export default function RecommendationPage() {
   const [districtId, setDistrictId] = useState('')
   const [soil, setSoil] = useState<SoilTypeId | null>(null)
 
+  const selectedDistrict = useMemo(() => {
+    return districts.find((d) => d.id === districtId) || null
+  }, [districts, districtId])
+
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<Recommendation | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
@@ -245,7 +252,7 @@ export default function RecommendationPage() {
       }
 
       const [{ data: districtRows, error: districtError }, { data: profile }] = await Promise.all([
-        supabase.from('districts').select('id, name').order('name'),
+        supabase.from('districts').select('id, name, latitude, longitude').order('name'),
         supabase.from('users').select('district_id').eq('id', user.id).single(),
       ])
 
@@ -420,6 +427,12 @@ export default function RecommendationPage() {
                 </span>
               </div>
             </section>
+
+            <SatelliteMap
+              latitude={selectedDistrict?.latitude ?? null}
+              longitude={selectedDistrict?.longitude ?? null}
+              districtName={selectedDistrict?.name ?? ''}
+            />
 
             {/* Soil selection */}
             <section className="mb-7">

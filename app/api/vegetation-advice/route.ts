@@ -50,6 +50,10 @@ export async function POST(request: Request) {
         typeof raw.district_name === 'string' && raw.district_name.trim()
           ? raw.district_name.trim()
           : 'your district',
+      stateName:
+        typeof raw.state_name === 'string' && raw.state_name.trim()
+          ? raw.state_name.trim()
+          : 'your state',
       season: typeof raw.season === 'string' ? raw.season : 'the current season',
       rainfallMm7d: toNumber(raw.rainfall_mm_7d, 0),
       soilMoisture: toNumber(raw.soil_moisture, 50),

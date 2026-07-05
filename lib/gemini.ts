@@ -68,6 +68,7 @@ function buildFallback(
 function buildPrompt(
   soilType: string,
   districtName: string,
+  stateName: string,
   season: string,
   viableCrops: string[],
   weatherSummary: WeatherSummary,
@@ -75,7 +76,7 @@ function buildPrompt(
   return [
     'Recommend the single best crop for a smallholder farmer based on the data below.',
     '',
-    `District: ${districtName}, Maharashtra, India`,
+    `District: ${districtName}, State: ${stateName}, Country: India`,
     `Soil type: ${soilType}`,
     `Season: ${season}`,
     `Average temperature (next 7 days): ${weatherSummary.averageTemperature} °C`,
@@ -179,6 +180,7 @@ function normalizeModelOutput(
 export async function getCropRecommendation(
   soilType: string,
   districtName: string,
+  stateName: string,
   season: string,
   viableCrops: string[],
   weatherSummary: WeatherSummary,
@@ -223,6 +225,7 @@ export async function getCropRecommendation(
     const prompt = buildPrompt(
       soilType,
       districtName,
+      stateName,
       season,
       viableCrops,
       weatherSummary,
@@ -303,6 +306,7 @@ export async function getCropRecommendation(
 /** Context the model uses to describe today's vegetation condition. */
 export interface VegetationContext {
   districtName: string
+  stateName: string
   season: string
   rainfallMm7d: number
   soilMoisture: number
@@ -351,7 +355,7 @@ function buildVegetationPrompt(ctx: VegetationContext): string {
   return [
     "Describe today's vegetation and soil-moisture condition for this field.",
     '',
-    `District: ${ctx.districtName}, Maharashtra, India`,
+    `District: ${ctx.districtName}, State: ${ctx.stateName}, Country: India`,
     `Season: ${ctx.season}`,
     `Soil moisture: ${ctx.soilMoisture}%`,
     `Expected rainfall (next 7 days): ${ctx.rainfallMm7d} mm`,

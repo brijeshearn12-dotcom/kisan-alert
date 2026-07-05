@@ -38,6 +38,7 @@ function parseTargetLang(raw: unknown): TargetLang {
 
 interface DistrictRow {
   name: string
+  state: string
   latitude: number | null
   longitude: number | null
 }
@@ -194,7 +195,7 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
     // ── 3. District lookup ────────────────────────────────────────────────
     const { data: district, error: districtError } = await supabase
       .from('districts')
-      .select('name, latitude, longitude')
+      .select('name, state, latitude, longitude')
       .eq('id', finalDistrictId)
       .single<DistrictRow>()
 
@@ -257,6 +258,7 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
       console.log('Gemini input:', JSON.stringify({
         soilType: finalSoilType,
         districtName: district.name,
+        stateName: district.state,
         season,
         viableCrops,
         weatherSummary,
@@ -266,6 +268,7 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
     const recommendation = await getCropRecommendation(
       finalSoilType,
       district.name,
+      district.state,
       season,
       viableCrops,
       weatherSummary,
@@ -293,11 +296,11 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
     }
 
     // ── 7b. Remember the selected district so the dashboard shows weather ──
-    // Upsert (not update) so a brand-new user without a profile row still gets
-    // one; only `district_id` is written, so name/role/soil_type are untouched.
+    // Use targeted update so we only modify district_id and preserve other profile data.
     const { error: districtSaveError } = await supabase
       .from('users')
-      .upsert({ id: userId, district_id: finalDistrictId }, { onConflict: 'id' })
+      .update({ district_id: finalDistrictId })
+      .eq('id', userId)
 
     if (isDev) {
       console.log('User update result:', JSON.stringify({ error: districtSaveError }))

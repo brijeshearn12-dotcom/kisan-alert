@@ -75,7 +75,7 @@ export default function HistoryPage() {
       // Fetch user profile for TopNav
       const { data: profile } = await supabase
         .from('users')
-        .select('name, districts(name)')
+        .select('name, districts(name, state)')
         .eq('id', user.id)
         .single()
 
@@ -85,7 +85,9 @@ export default function HistoryPage() {
         }
         if (profile.districts) {
           const dist = Array.isArray(profile.districts) ? profile.districts[0] : profile.districts
-          setUserDistrict(dist?.name || null)
+          if (dist) {
+            setUserDistrict(dist.state ? `${dist.name}, ${dist.state}` : (dist.name || null))
+          }
         }
       }
 

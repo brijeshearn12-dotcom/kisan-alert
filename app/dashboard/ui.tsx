@@ -49,7 +49,7 @@ export interface DashboardData {
 export interface ProfileRow {
   name: string | null
   role: string | null
-  districts: { name: string | null } | null
+  districts: { name: string | null; state: string | null } | null
 }
 
 export interface Profile {

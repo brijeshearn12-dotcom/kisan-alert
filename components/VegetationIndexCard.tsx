@@ -31,6 +31,7 @@ interface VegetationIndexCardProps {
   latitude: number | null
   longitude: number | null
   districtName: string
+  stateName?: string
 }
 
 type WeatherStatus = 'idle' | 'loading' | 'ready' | 'error'
@@ -158,6 +159,7 @@ export default function VegetationIndexCard({
   latitude,
   longitude,
   districtName,
+  stateName = 'Maharashtra',
 }: VegetationIndexCardProps) {
   const reducedMotion = usePrefersReducedMotion()
 
@@ -251,7 +253,7 @@ export default function VegetationIndexCard({
     // Bucket the volatile inputs so tiny slider nudges reuse the same advice.
     const rainBucket = Math.round(rainfallMm7d / 5) * 5
     const scoreBucket = Math.round(index.score / 5) * 5
-    const key = `${districtName}|${season}|${rainBucket}|${index.status}|${scoreBucket}`
+    const key = `${districtName}|${stateName}|${season}|${rainBucket}|${index.status}|${scoreBucket}`
 
     const cached = adviceCache.current.get(key)
     if (cached) {
@@ -268,6 +270,7 @@ export default function VegetationIndexCard({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             district_name: districtName,
+            state_name: stateName,
             season,
             rainfall_mm_7d: rainfallMm7d,
             soil_moisture: soilMoisture,

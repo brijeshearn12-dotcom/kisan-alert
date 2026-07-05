@@ -52,7 +52,7 @@ export default function DashboardPage() {
         const [profileRes, dashRes] = await Promise.all([
           supabase
             .from('users')
-            .select('name, role, districts(name)')
+            .select('name, role, districts(name, state)')
             .eq('id', user.id)
             .single<ProfileRow>(),
           fetch(`/api/dashboard?soil_moisture_pct=${soilMoisture}`, { cache: 'no-store' }),
@@ -65,9 +65,17 @@ export default function DashboardPage() {
         if (!active) return
 
         const row = profileRes.data
+        let locationLabel: string | null = null
+        if (row?.districts) {
+          const d = Array.isArray(row.districts) ? row.districts[0] : row.districts
+          if (d && d.name) {
+            locationLabel = d.state ? `${d.name.trim()}, ${d.state.trim()}` : d.name.trim()
+          }
+        }
+
         setProfile({
           name: row?.name?.trim() || null,
-          district: row?.districts?.name?.trim() || null,
+          district: locationLabel,
           isExpert: row?.role === 'expert',
         })
         setData(dash)

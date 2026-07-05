@@ -33,6 +33,7 @@ function langToLanguageCode(
 interface District {
   id: string
   name: string
+  state: string
   latitude: number | null
   longitude: number | null
 }
@@ -230,8 +231,19 @@ export default function RecommendationPage() {
 
   const [initState, setInitState] = useState<InitState>('loading')
   const [districts, setDistricts] = useState<District[]>([])
+  const [selectedState, setSelectedState] = useState('')
   const [districtId, setDistrictId] = useState('')
   const [soil, setSoil] = useState<SoilTypeId | null>(null)
+
+  const states = useMemo(() => {
+    const list = districts.map((d) => d.state).filter(Boolean)
+    return [...new Set(list)].sort()
+  }, [districts])
+
+  const filteredDistricts = useMemo(() => {
+    if (!selectedState) return []
+    return districts.filter((d) => d.state === selectedState)
+  }, [districts, selectedState])
 
   const selectedDistrict = useMemo(() => {
     return districts.find((d) => d.id === districtId) || null
@@ -271,7 +283,7 @@ export default function RecommendationPage() {
       }
 
       const [{ data: districtRows, error: districtError }, { data: profile }] = await Promise.all([
-        supabase.from('districts').select('id, name, latitude, longitude').order('name'),
+        supabase.from('districts').select('id, name, state, latitude, longitude').order('name'),
         supabase.from('users').select('district_id').eq('id', user.id).single(),
       ])
 
@@ -283,9 +295,14 @@ export default function RecommendationPage() {
 
       setDistricts(districtRows)
       const preferred = profile?.district_id
-      setDistrictId(
-        preferred && districtRows.some((d) => d.id === preferred) ? preferred : districtRows[0].id,
-      )
+      const defaultDistrict = preferred && districtRows.find((d) => d.id === preferred)
+        ? districtRows.find((d) => d.id === preferred)
+        : districtRows[0]
+
+      if (defaultDistrict) {
+        setSelectedState(defaultDistrict.state)
+        setDistrictId(defaultDistrict.id)
+      }
       setInitState('ready')
     }
 
@@ -423,6 +440,38 @@ export default function RecommendationPage() {
 
         {initState === 'ready' && (
           <>
+            {/* State */}
+            <section className="mb-6">
+              <label htmlFor="state" className="mb-1.5 block text-sm font-medium text-slate-700">
+                State
+              </label>
+              <div className="relative">
+                <select
+                  id="state"
+                  value={selectedState}
+                  onChange={(e) => {
+                    const nextState = e.target.value
+                    setSelectedState(nextState)
+                    // Auto-select the first district in the new state
+                    const firstInState = districts.find((d) => d.state === nextState)
+                    if (firstInState) {
+                      setDistrictId(firstInState.id)
+                    }
+                  }}
+                  className="w-full appearance-none rounded-lg border border-slate-200 bg-white py-2.5 pl-3.5 pr-10 text-sm text-slate-900 shadow-sm transition-colors hover:border-slate-300 focus:border-primary-green focus:outline-none focus:ring-4 focus:ring-primary-green/10"
+                >
+                  {states.map((st) => (
+                    <option key={st} value={st}>
+                      {st}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  {ChevronIcon}
+                </span>
+              </div>
+            </section>
+
             {/* District */}
             <section className="mb-6">
               <label htmlFor="district" className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -435,7 +484,7 @@ export default function RecommendationPage() {
                   onChange={(e) => setDistrictId(e.target.value)}
                   className="w-full appearance-none rounded-lg border border-slate-200 bg-white py-2.5 pl-3.5 pr-10 text-sm text-slate-900 shadow-sm transition-colors hover:border-slate-300 focus:border-primary-green focus:outline-none focus:ring-4 focus:ring-primary-green/10"
                 >
-                  {districts.map((d) => (
+                  {filteredDistricts.map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.name}
                     </option>
@@ -450,7 +499,7 @@ export default function RecommendationPage() {
             <SatelliteMap
               latitude={selectedDistrict?.latitude ?? null}
               longitude={selectedDistrict?.longitude ?? null}
-              districtName={selectedDistrict?.name ?? ''}
+              districtName={selectedDistrict ? `${selectedDistrict.name}, ${selectedDistrict.state}` : ''}
             />
 
             {/* Vegetation & Moisture Index — hero feature. Estimates field
@@ -460,6 +509,7 @@ export default function RecommendationPage() {
               latitude={selectedDistrict?.latitude ?? null}
               longitude={selectedDistrict?.longitude ?? null}
               districtName={selectedDistrict?.name ?? ''}
+              stateName={selectedDistrict?.state ?? ''}
             />
 
             {/* Soil selection */}

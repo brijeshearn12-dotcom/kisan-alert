@@ -10,6 +10,9 @@ import { EmptyState } from '@/components/EmptyState'
 import { ListenButton } from '@/components/ListenButton'
 import SatelliteMap from '@/components/SatelliteMap'
 import VegetationIndexCard from '@/components/VegetationIndexCard'
+import IndiaMap from '@/components/IndiaMap'
+import DistrictInfoCard from '@/components/DistrictInfoCard'
+import type { CurrentWeather } from '@/lib/weather'
 
 function langToLanguageCode(
   lang: 'en' | 'hi' | 'te' | 'mr'
@@ -251,6 +254,48 @@ export default function RecommendationPage() {
 
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<Recommendation | null>(null)
+  const [weather, setWeather] = useState<CurrentWeather | null>(null)
+  const [weatherLoading, setWeatherLoading] = useState(false)
+  const [weatherFetchedAt, setWeatherFetchedAt] = useState<Date | null>(null)
+  const [vegetationScore, setVegetationScore] = useState<number | null>(null)
+  const [vegetationStatus, setVegetationStatus] = useState<string | null>(null)
+  const [vegetationAdvice, setVegetationAdvice] = useState<string | null>(null)
+  const [vegetationAdviceLoading, setVegetationAdviceLoading] = useState(false)
+
+  // Fetch weather at page level when selected district coordinates change
+  useEffect(() => {
+    if (!selectedDistrict || selectedDistrict.latitude === null || selectedDistrict.longitude === null) {
+      setWeather(null)
+      setWeatherLoading(false)
+      setWeatherFetchedAt(null)
+      return
+    }
+
+    let active = true
+    setWeatherLoading(true)
+
+    fetch(`/api/weather?lat=${selectedDistrict.latitude}&lon=${selectedDistrict.longitude}`, { cache: 'no-store' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('weather request failed')
+        return res.json() as Promise<{ weather: CurrentWeather | null }>
+      })
+      .then((data) => {
+        if (!active) return
+        setWeather(data.weather)
+        setWeatherLoading(false)
+        setWeatherFetchedAt(new Date())
+      })
+      .catch(() => {
+        if (!active) return
+        setWeather(null)
+        setWeatherLoading(false)
+        setWeatherFetchedAt(null)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [selectedDistrict])
   const [formError, setFormError] = useState<string | null>(null)
   const [language, setLanguage] = useState<LanguageCode>('en')
 
@@ -496,6 +541,38 @@ export default function RecommendationPage() {
               </div>
             </section>
 
+            {/* GIS Centerpiece Map and HUD */}
+            <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <IndiaMap
+                districts={districts}
+                selectedState={selectedState}
+                selectedDistrictId={districtId}
+                onStateSelect={(stateName) => {
+                  setSelectedState(stateName)
+                  const firstInState = districts.find((d) => d.state === stateName)
+                  if (firstInState) {
+                    setDistrictId(firstInState.id)
+                  }
+                }}
+                onDistrictSelect={(distId) => {
+                  setDistrictId(distId)
+                }}
+              />
+              <DistrictInfoCard
+                districtName={selectedDistrict?.name ?? ''}
+                stateName={selectedDistrict?.state ?? ''}
+                soilType={soil}
+                weather={weather}
+                weatherLoading={weatherLoading}
+                vegetationScore={vegetationScore}
+                vegetationStatus={vegetationStatus}
+                aiAdvisory={vegetationAdvice}
+                aiAdvisoryLoading={vegetationAdviceLoading}
+                recommendedCrop={result?.crop_name ?? null}
+                recommendationConfidence={result?.confidence_score ?? null}
+              />
+            </div>
+
             <SatelliteMap
               latitude={selectedDistrict?.latitude ?? null}
               longitude={selectedDistrict?.longitude ?? null}
@@ -510,6 +587,17 @@ export default function RecommendationPage() {
               longitude={selectedDistrict?.longitude ?? null}
               districtName={selectedDistrict?.name ?? ''}
               stateName={selectedDistrict?.state ?? ''}
+              externalWeather={weather}
+              externalWeatherLoading={weatherLoading}
+              externalFetchedAt={weatherFetchedAt}
+              onIndexChange={(score, status) => {
+                setVegetationScore(score)
+                setVegetationStatus(status)
+              }}
+              onAdviceChange={(advice, loading) => {
+                setVegetationAdvice(advice)
+                setVegetationAdviceLoading(loading)
+              }}
             />
 
             {/* Soil selection */}

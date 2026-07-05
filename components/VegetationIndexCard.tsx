@@ -32,6 +32,11 @@ interface VegetationIndexCardProps {
   longitude: number | null
   districtName: string
   stateName?: string
+  externalWeather?: CurrentWeather | null
+  externalWeatherLoading?: boolean
+  externalFetchedAt?: Date | null
+  onIndexChange?: (score: number, status: string) => void
+  onAdviceChange?: (advice: string, loading: boolean) => void
 }
 
 type WeatherStatus = 'idle' | 'loading' | 'ready' | 'error'
@@ -160,15 +165,20 @@ export default function VegetationIndexCard({
   longitude,
   districtName,
   stateName = 'Maharashtra',
+  externalWeather,
+  externalWeatherLoading,
+  externalFetchedAt,
+  onIndexChange,
+  onAdviceChange,
 }: VegetationIndexCardProps) {
   const reducedMotion = usePrefersReducedMotion()
 
   const season = useMemo<Season>(() => getSeasonForMonth(new Date().getMonth() + 1), [])
 
   const [soilMoisture, setSoilMoisture] = useState(50)
-  const [weather, setWeather] = useState<CurrentWeather | null>(null)
-  const [weatherStatus, setWeatherStatus] = useState<WeatherStatus>('idle')
-  const [fetchedAt, setFetchedAt] = useState<Date | null>(null)
+  const [internalWeather, setInternalWeather] = useState<CurrentWeather | null>(null)
+  const [internalWeatherStatus, setInternalWeatherStatus] = useState<WeatherStatus>('idle')
+  const [internalFetchedAt, setInternalFetchedAt] = useState<Date | null>(null)
 
   const [advice, setAdvice] = useState<string>('')
   const [adviceLoading, setAdviceLoading] = useState(false)
@@ -176,17 +186,24 @@ export default function VegetationIndexCard({
 
   const adviceCache = useRef<Map<string, string>>(new Map())
 
+  const isExternal = externalWeather !== undefined
+  const weather = isExternal ? externalWeather : internalWeather
+  const weatherStatus = isExternal
+    ? (externalWeatherLoading ? 'loading' as WeatherStatus : (externalWeather ? 'ready' as WeatherStatus : 'error' as WeatherStatus))
+    : internalWeatherStatus
+  const fetchedAt = isExternal ? externalFetchedAt : internalFetchedAt
+
   // ── Fetch live weather when the district's coordinates change ──────────────
   useEffect(() => {
+    if (isExternal) return
     if (latitude === null || longitude === null) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset when no district is selected
-      setWeather(null)
-      setWeatherStatus('idle')
+      setInternalWeather(null)
+      setInternalWeatherStatus('idle')
       return
     }
 
     let active = true
-    setWeatherStatus('loading')
+    setInternalWeatherStatus('loading')
 
     fetch(`/api/weather?lat=${latitude}&lon=${longitude}`, { cache: 'no-store' })
       .then(async (res) => {
@@ -195,20 +212,20 @@ export default function VegetationIndexCard({
       })
       .then((data) => {
         if (!active) return
-        setWeather(data.weather)
-        setWeatherStatus(data.weather ? 'ready' : 'error')
-        setFetchedAt(new Date())
+        setInternalWeather(data.weather)
+        setInternalWeatherStatus(data.weather ? 'ready' : 'error')
+        setInternalFetchedAt(new Date())
       })
       .catch(() => {
         if (!active) return
-        setWeather(null)
-        setWeatherStatus('error')
+        setInternalWeather(null)
+        setInternalWeatherStatus('error')
       })
 
     return () => {
       active = false
     }
-  }, [latitude, longitude])
+  }, [latitude, longitude, isExternal])
 
   const hasRainfall = weatherStatus === 'ready' && weather !== null
 
@@ -224,6 +241,18 @@ export default function VegetationIndexCard({
     () => computeIndex(soilMoisture, rainfallMm7d, season),
     [soilMoisture, rainfallMm7d, season],
   )
+
+  useEffect(() => {
+    if (onIndexChange) {
+      onIndexChange(index.score, index.status)
+    }
+  }, [index.score, index.status, onIndexChange])
+
+  useEffect(() => {
+    if (onAdviceChange) {
+      onAdviceChange(advice, adviceLoading)
+    }
+  }, [advice, adviceLoading, onAdviceChange])
 
   const confidence = useMemo(
     () => computeConfidence({ hasRainfall, hasSeason: true, hasSoil: true }),

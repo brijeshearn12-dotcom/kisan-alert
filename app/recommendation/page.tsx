@@ -12,6 +12,7 @@ import SatelliteMap from '@/components/SatelliteMap'
 import VegetationIndexCard from '@/components/VegetationIndexCard'
 import IndiaMap from '@/components/IndiaMap'
 import DistrictInfoCard from '@/components/DistrictInfoCard'
+import DemoPresetChips from '@/components/DemoPresetChips'
 import type { CurrentWeather } from '@/lib/weather'
 
 function langToLanguageCode(
@@ -257,6 +258,7 @@ export default function RecommendationPage() {
   const [weather, setWeather] = useState<CurrentWeather | null>(null)
   const [weatherLoading, setWeatherLoading] = useState(false)
   const [weatherFetchedAt, setWeatherFetchedAt] = useState<Date | null>(null)
+  const [soilMoisture, setSoilMoisture] = useState(50)
   const [vegetationScore, setVegetationScore] = useState<number | null>(null)
   const [vegetationStatus, setVegetationStatus] = useState<string | null>(null)
   const [vegetationAdvice, setVegetationAdvice] = useState<string | null>(null)
@@ -265,6 +267,7 @@ export default function RecommendationPage() {
   // Fetch weather at page level when selected district coordinates change
   useEffect(() => {
     if (!selectedDistrict || selectedDistrict.latitude === null || selectedDistrict.longitude === null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset weather when no district is selected
       setWeather(null)
       setWeatherLoading(false)
       setWeatherFetchedAt(null)
@@ -367,8 +370,16 @@ export default function RecommendationPage() {
   // Shared request used by both the generate button and language switching.
   // `lang` is passed explicitly (not read from state) so an immediate re-fetch
   // after a language change uses the new value without waiting for a re-render.
-  async function requestRecommendation(targetSoil: SoilTypeId, lang: LanguageCode) {
-    if (!districtId || submitting) return
+  async function requestRecommendation(
+    targetSoil: SoilTypeId,
+    lang: LanguageCode,
+    overrideDistrictId?: string,
+  ) {
+    // `overrideDistrictId` lets callers (e.g. demo presets) pass a freshly
+    // selected district without waiting for the `districtId` state to settle,
+    // so the request never races the setState that selected it.
+    const targetDistrictId = overrideDistrictId ?? districtId
+    if (!targetDistrictId || submitting) return
 
     setSubmitting(true)
     setFormError(null)
@@ -379,7 +390,7 @@ export default function RecommendationPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          district_id: districtId,
+          district_id: targetDistrictId,
           soil_type: targetSoil,
           target_lang: lang,
         }),
@@ -401,6 +412,12 @@ export default function RecommendationPage() {
   function handleGenerate() {
     if (!soil) return
     requestRecommendation(soil, language)
+  }
+
+  // Invoked by the demo preset chips: kicks off the existing workflow with the
+  // preset's explicit soil + district so it can't read stale state.
+  function handlePresetGenerate(presetSoil: SoilTypeId, presetDistrictId: string) {
+    requestRecommendation(presetSoil, language, presetDistrictId)
   }
 
   // Change language: update state, persist to localStorage (Task 4), and — if a
@@ -485,6 +502,18 @@ export default function RecommendationPage() {
 
         {initState === 'ready' && (
           <>
+            {/* Demo preset chips — one-click scenarios for judges. Populate the
+                form state below and trigger the existing workflow. */}
+            <DemoPresetChips
+              districts={districts}
+              setState={setSelectedState}
+              setDistrict={setDistrictId}
+              setSoilType={setSoil}
+              setMoisture={setSoilMoisture}
+              onGenerate={handlePresetGenerate}
+              submitting={submitting}
+            />
+
             {/* State */}
             <section className="mb-6">
               <label htmlFor="state" className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -590,6 +619,8 @@ export default function RecommendationPage() {
               externalWeather={weather}
               externalWeatherLoading={weatherLoading}
               externalFetchedAt={weatherFetchedAt}
+              soilMoisture={soilMoisture}
+              onSoilMoistureChange={setSoilMoisture}
               onIndexChange={(score, status) => {
                 setVegetationScore(score)
                 setVegetationStatus(status)

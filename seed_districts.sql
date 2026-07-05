@@ -76,7 +76,14 @@ INSERT INTO districts (id, name, state, latitude, longitude) VALUES
 ('d10b1002-8b2b-4c0a-9d1d-222222222222', 'Indore', 'Madhya Pradesh', 22.7196, 75.8577),
 ('d10b1003-8b2b-4c0a-9d1d-333333333333', 'Gwalior', 'Madhya Pradesh', 26.2183, 78.1828),
 ('d10b1004-8b2b-4c0a-9d1d-444444444444', 'Jabalpur', 'Madhya Pradesh', 23.1815, 79.9864),
-('d10b1005-8b2b-4c0a-9d1d-555555555555', 'Ujjain', 'Madhya Pradesh', 23.1760, 75.7885)
+('d10b1005-8b2b-4c0a-9d1d-555555555555', 'Ujjain', 'Madhya Pradesh', 23.1760, 75.7885),
+
+-- Maharashtra (black-cotton soil belt; powers the "Black Soil — Pune" demo preset)
+('d11b1101-8b2b-4c0a-9d1e-111111111111', 'Pune', 'Maharashtra', 18.5204, 73.8567),
+('d11b1102-8b2b-4c0a-9d1e-222222222222', 'Nagpur', 'Maharashtra', 21.1458, 79.0882),
+('d11b1103-8b2b-4c0a-9d1e-333333333333', 'Nashik', 'Maharashtra', 19.9975, 73.7898),
+('d11b1104-8b2b-4c0a-9d1e-444444444444', 'Aurangabad', 'Maharashtra', 19.8762, 75.3433),
+('d11b1105-8b2b-4c0a-9d1e-555555555555', 'Solapur', 'Maharashtra', 17.6599, 75.9064)
 ON CONFLICT (id) DO NOTHING;
 
 -- Recommended database indices for query scaling

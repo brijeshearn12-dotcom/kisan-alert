@@ -35,6 +35,9 @@ interface VegetationIndexCardProps {
   externalWeather?: CurrentWeather | null
   externalWeatherLoading?: boolean
   externalFetchedAt?: Date | null
+  /** When provided, the soil-moisture slider is controlled by the parent. */
+  soilMoisture?: number
+  onSoilMoistureChange?: (value: number) => void
   onIndexChange?: (score: number, status: string) => void
   onAdviceChange?: (advice: string, loading: boolean) => void
 }
@@ -168,6 +171,8 @@ export default function VegetationIndexCard({
   externalWeather,
   externalWeatherLoading,
   externalFetchedAt,
+  soilMoisture: externalSoilMoisture,
+  onSoilMoistureChange,
   onIndexChange,
   onAdviceChange,
 }: VegetationIndexCardProps) {
@@ -175,7 +180,14 @@ export default function VegetationIndexCard({
 
   const season = useMemo<Season>(() => getSeasonForMonth(new Date().getMonth() + 1), [])
 
-  const [soilMoisture, setSoilMoisture] = useState(50)
+  // Soil moisture is controlled by the parent when `soilMoisture` is provided
+  // (e.g. demo presets); otherwise the slider manages its own value.
+  const [internalSoilMoisture, setInternalSoilMoisture] = useState(50)
+  const soilMoisture = externalSoilMoisture ?? internalSoilMoisture
+  const setSoilMoisture = (value: number) => {
+    if (onSoilMoistureChange) onSoilMoistureChange(value)
+    else setInternalSoilMoisture(value)
+  }
   const [internalWeather, setInternalWeather] = useState<CurrentWeather | null>(null)
   const [internalWeatherStatus, setInternalWeatherStatus] = useState<WeatherStatus>('idle')
   const [internalFetchedAt, setInternalFetchedAt] = useState<Date | null>(null)
@@ -197,6 +209,7 @@ export default function VegetationIndexCard({
   useEffect(() => {
     if (isExternal) return
     if (latitude === null || longitude === null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset when no district is selected
       setInternalWeather(null)
       setInternalWeatherStatus('idle')
       return
@@ -321,7 +334,7 @@ export default function VegetationIndexCard({
     // Each keystroke on the slider resets the 400ms timer (debounce); the
     // bucketed cache key then prevents redundant Gemini calls for nearby values.
     return () => clearTimeout(timer)
-  }, [hasRainfall, districtName, season, rainfallMm7d, index.score, index.status, soilMoisture])
+  }, [hasRainfall, districtName, stateName, season, rainfallMm7d, index.score, index.status, soilMoisture])
 
   const badge = badgeFor(index.status, index.score)
 

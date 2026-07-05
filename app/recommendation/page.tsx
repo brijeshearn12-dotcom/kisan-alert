@@ -14,23 +14,9 @@ import IndiaMap from '@/components/IndiaMap'
 import DistrictInfoCard from '@/components/DistrictInfoCard'
 import DemoPresetChips from '@/components/DemoPresetChips'
 import type { CurrentWeather } from '@/lib/weather'
-
-function langToLanguageCode(
-  lang: 'en' | 'hi' | 'te' | 'mr'
-): 'en-IN' | 'hi-IN' | 'te-IN' | 'mr-IN' {
-  switch (lang) {
-    case 'en':
-      return 'en-IN'
-    case 'hi':
-      return 'hi-IN'
-    case 'te':
-      return 'te-IN'
-    case 'mr':
-      return 'mr-IN'
-    default:
-      return 'en-IN'
-  }
-}
+import { useLanguage } from '@/contexts/LanguageContext'
+import { toSpeechLocale } from '@/lib/i18n/speech'
+import type { LanguageCode } from '@/lib/i18n/translations'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -65,33 +51,13 @@ interface Recommendation {
 type InitState = 'loading' | 'ready' | 'unauthenticated' | 'error'
 
 // ── Languages ─────────────────────────────────────────────────────────────────
-
-type LanguageCode = 'en' | 'hi' | 'te' | 'mr'
-
-const LANGUAGE_STORAGE_KEY = 'preferredLanguage'
-
-interface LanguageOption {
-  code: LanguageCode
-  label: string
-  flag: string
-}
-
-/** Selector options. Flags are emoji so no image assets are required. */
-const LANGUAGES: LanguageOption[] = [
-  { code: 'en', label: 'English', flag: '🇬🇧' },
-  { code: 'hi', label: 'हिन्दी', flag: '🇮🇳' },
-  { code: 'te', label: 'తెలుగు', flag: '🇮🇳' },
-  { code: 'mr', label: 'मराठी', flag: '🇮🇳' },
-]
-
-/** Narrow an arbitrary string (e.g. from localStorage) to a supported code. */
-function isLanguageCode(value: string | null): value is LanguageCode {
-  return value === 'en' || value === 'hi' || value === 'te' || value === 'mr'
-}
+// The active language now comes from the global LanguageContext (see the
+// bottom-right selector). `LanguageCode` and the language list live in
+// `lib/i18n/translations.ts`; this page only reads the current value.
 
 /**
  * Resolve which advisory copy to show for the active language.
- * Falls back to English whenever a translation is missing (Task 7).
+ * Falls back to English whenever a translation is missing.
  */
 function displayFields(
   result: Recommendation,
@@ -300,20 +266,10 @@ export default function RecommendationPage() {
     }
   }, [selectedDistrict])
   const [formError, setFormError] = useState<string | null>(null)
-  const [language, setLanguage] = useState<LanguageCode>('en')
 
-  // Restore the saved language preference once on mount (Task 4). This must run
-  // in an effect — not a lazy useState initializer — because localStorage does
-  // not exist during SSR, so initializing from it would cause a hydration
-  // mismatch. Server + first client render use 'en', then we sync to the saved
-  // value. The set-state-in-effect rule is intentionally suppressed here.
-  useEffect(() => {
-    const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY)
-    if (isLanguageCode(saved)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing persisted client-only preference post-hydration
-      setLanguage(saved)
-    }
-  }, [])
+  // Language is global now: the single selector in the layout drives it, and the
+  // provider handles persistence + restore. This page just reads the value.
+  const { language } = useLanguage()
 
   // Load the session + district options once on mount.
   useEffect(() => {
@@ -420,16 +376,23 @@ export default function RecommendationPage() {
     requestRecommendation(presetSoil, language, presetDistrictId)
   }
 
-  // Change language: update state, persist to localStorage (Task 4), and — if a
-  // result is already on screen — re-request it in the newly selected language.
-  function handleLanguageChange(next: LanguageCode) {
-    if (next === language) return
-    setLanguage(next)
-    localStorage.setItem(LANGUAGE_STORAGE_KEY, next)
+  // When the global language changes and a result is already on screen,
+  // re-request it in the new language. The initial mount (and the provider's
+  // post-hydration restore, which fires before any result exists) is skipped.
+  const prevLanguageRef = useRef(language)
+  useEffect(() => {
+    if (prevLanguageRef.current === language) return
+    prevLanguageRef.current = language
     if (result && soil && !submitting) {
-      requestRecommendation(soil, next)
+      // Re-request the recommendation in the newly selected language. This is a
+      // deliberate reaction to external (context) state, not derived state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional re-fetch on language change
+      requestRecommendation(soil, language)
     }
-  }
+    // Re-run only when `language` changes; requestRecommendation is a stable
+    // closure over current component state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language])
 
   function handleReset() {
     setResult(null)
@@ -456,11 +419,7 @@ export default function RecommendationPage() {
             <span className="text-primary-green">{LeafIcon}</span>
             Crop Advisory
           </span>
-
-          {/* Language selector — compact, sits above the recommendation card. */}
-          <div className="ml-auto">
-            <LanguageSelector value={language} onChange={handleLanguageChange} disabled={submitting} />
-          </div>
+          {/* Language is chosen from the single global selector (bottom-right). */}
         </div>
       </div>
 
@@ -808,7 +767,7 @@ const ResultCard = forwardRef<
               <p className="mt-2 text-sm leading-relaxed text-slate-600">{fields.reasoning}</p>
               <ListenButton
                 text={fields.reasoning}
-                languageCode={langToLanguageCode(language)}
+                languageCode={toSpeechLocale(language)}
               />
             </div>
 
@@ -864,13 +823,13 @@ const ResultCard = forwardRef<
             emoji="🌱"
             title="Fertilization Tip"
             body={fields.fertilization_tip?.trim() ? fields.fertilization_tip : 'No recommendation available.'}
-            languageCode={langToLanguageCode(language)}
+            languageCode={toSpeechLocale(language)}
           />
           <AdvisoryCard
             emoji="💧"
             title="Irrigation Advice"
             body={fields.irrigation_advice?.trim() ? fields.irrigation_advice : 'No recommendation available.'}
-            languageCode={langToLanguageCode(language)}
+            languageCode={toSpeechLocale(language)}
           />
         </div>
       </EntranceAnimation>
@@ -913,63 +872,6 @@ function AdvisoryCard({
         <ListenButton text={body} languageCode={languageCode} />
       )}
     </section>
-  )
-}
-
-// ── Language selector ───────────────────────────────────────────────────────
-
-/**
- * Compact, rounded language dropdown with a small circular flag badge and soft
- * shadow. A native <select> keeps it fully accessible and mobile-friendly while
- * matching the page's slate/green palette and spacing.
- */
-function LanguageSelector({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: LanguageCode
-  onChange: (next: LanguageCode) => void
-  disabled?: boolean
-}) {
-  const active = LANGUAGES.find((l) => l.code === value) ?? LANGUAGES[0]
-
-  return (
-    <label
-      className={[
-        'group relative flex items-center gap-1.5 rounded-full border border-slate-200 bg-white pl-1 pr-6 shadow-sm transition-colors',
-        disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-slate-300',
-      ].join(' ')}
-    >
-      {/* Circular flag badge */}
-      <span
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-50 text-sm leading-none ring-1 ring-inset ring-slate-100"
-        aria-hidden="true"
-      >
-        {active.flag}
-      </span>
-      <span className="text-xs font-medium text-slate-600">{active.label}</span>
-
-      {/* The real control fills the label so the whole chip is clickable. */}
-      <select
-        aria-label="Recommendation language"
-        value={value}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.value as LanguageCode)}
-        className="absolute inset-0 h-full w-full cursor-[inherit] appearance-none rounded-full bg-transparent text-transparent opacity-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
-      >
-        {LANGUAGES.map((l) => (
-          <option key={l.code} value={l.code} className="text-slate-900">
-            {l.flag} {l.label}
-          </option>
-        ))}
-      </select>
-
-      {/* Chevron */}
-      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400">
-        {ChevronIcon}
-      </span>
-    </label>
   )
 }
 

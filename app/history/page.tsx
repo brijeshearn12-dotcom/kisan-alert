@@ -134,7 +134,7 @@ export default function HistoryPage() {
         <header className="mb-8">
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Activity History</h1>
           <p className="mt-2 text-sm text-slate-500">
-            A comprehensive record of your farm's crop recommendations and leaf disease checks.
+            A comprehensive record of your farm&apos;s crop recommendations and leaf disease checks.
           </p>
         </header>
 

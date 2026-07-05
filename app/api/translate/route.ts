@@ -8,8 +8,8 @@
 import { translateText } from '@/lib/googleCloud'
 
 // Languages the app translates into; unknown targets pass through unchanged.
-type TargetLang = 'hi' | 'te' | 'mr' | 'en'
-const SUPPORTED: TargetLang[] = ['hi', 'te', 'mr', 'en']
+type TargetLang = 'en' | 'hi' | 'mr' | 'gu' | 'kn' | 'ta' | 'te' | 'bn'
+const SUPPORTED: TargetLang[] = ['en', 'hi', 'mr', 'gu', 'kn', 'ta', 'te', 'bn']
 
 export async function POST(request: Request) {
   const { text, targetLang } = (await request.json()) as {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 interface ListenButtonProps {
   text: string
@@ -9,21 +9,21 @@ interface ListenButtonProps {
 
 export function ListenButton({ text, languageCode }: ListenButtonProps) {
   const [playing, setPlaying] = useState(false)
-  const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     return () => {
-      if (audio) {
-        audio.pause()
+      if (audioRef.current) {
+        audioRef.current.pause()
       }
     }
-  }, [audio])
+  }, [])
 
   async function handlePlay() {
     if (playing) {
-      if (audio) {
-        audio.pause()
-        audio.currentTime = 0
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
       }
       setPlaying(false)
       return
@@ -39,7 +39,7 @@ export function ListenButton({ text, languageCode }: ListenButtonProps) {
       const { audioContent } = await response.json()
       if (audioContent) {
         const audioObj = new Audio(`data:audio/mp3;base64,${audioContent}`)
-        setAudio(audioObj)
+        audioRef.current = audioObj
         audioObj.play().catch((err) => {
           console.error('Audio playback failed:', err)
           setPlaying(false)

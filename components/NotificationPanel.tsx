@@ -69,6 +69,7 @@ export function NotificationPanel() {
   // 2. Set up real-time Firebase Realtime Database listener
   useEffect(() => {
     if (!userId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear notifications when user logs out
       setNotifications([])
       return
     }

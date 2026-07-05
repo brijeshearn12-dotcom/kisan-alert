@@ -51,6 +51,7 @@ export function useAudioLevels(stream: MediaStream | null): number[] {
       }
 
       prevRef.current = ZERO_BARS
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset bars state on clean up
       setBars(ZERO_BARS)
       return
     }

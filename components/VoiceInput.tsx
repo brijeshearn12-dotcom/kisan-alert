@@ -52,6 +52,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
   const [countdown, setCountdown] = useState(MAX_RECORDING_SECONDS)
   const [transcript, setTranscript] = useState('')
   const [errorDetail, setErrorDetail] = useState('')
+  const [stream, setStream] = useState<MediaStream | null>(null)
 
   const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -76,6 +77,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
       recorderRef.current.stop()
     }
     streamRef.current?.getTracks().forEach((t) => t.stop())
+    setStream(null)
   }, [])
 
   /** Convert a Blob to base64 string (data URL stripped to raw base64). */
@@ -124,6 +126,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
     }
 
     streamRef.current = stream
+    setStream(stream)
 
     // Prefer webm/opus; fall back to whatever the browser supports
     const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
@@ -223,7 +226,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
             </span>
           </div>
 
-          <VoiceWaveform stream={streamRef.current} isRecording={state === 'recording'} />
+          <VoiceWaveform stream={stream} isRecording={state === 'recording'} />
 
           <div className="h-1.5 w-full rounded-full bg-rose-100 overflow-hidden">
             <div

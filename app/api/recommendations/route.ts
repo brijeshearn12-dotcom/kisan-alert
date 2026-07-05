@@ -26,8 +26,8 @@ import { sendFirebaseNotification } from '@/lib/firebase'
 const VALID_SOIL_IDS = new Set<string>(SOIL_TYPES.map((soil) => soil.id))
 
 /** Languages the recommendation fields can be translated into. */
-type TargetLang = 'en' | 'hi' | 'te' | 'mr'
-const TRANSLATABLE_LANGS = new Set<TargetLang>(['en', 'hi', 'te', 'mr'])
+type TargetLang = 'en' | 'hi' | 'te' | 'mr' | 'gu' | 'kn' | 'ta' | 'bn'
+const TRANSLATABLE_LANGS = new Set<TargetLang>(['en', 'hi', 'te', 'mr', 'gu', 'kn', 'ta', 'bn'])
 
 /** Narrow an untrusted body value to a supported language, defaulting to 'en'. */
 function parseTargetLang(raw: unknown): TargetLang {

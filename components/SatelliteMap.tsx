@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+
 interface SatelliteMapProps {
   latitude: number | null
   longitude: number | null
@@ -11,6 +13,8 @@ export default function SatelliteMap({
   longitude,
   districtName,
 }: SatelliteMapProps) {
+  const [loaded, setLoaded] = useState(false)
+
   if (latitude === null || longitude === null) {
     return (
       <div className="flex h-[200px] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 text-slate-500">
@@ -28,7 +32,7 @@ export default function SatelliteMap({
           Satellite View — {districtName}
         </h3>
       </div>
-      <div className="relative h-[200px] w-full bg-slate-100 bg-slate-200 animate-pulse">
+      <div className={`relative h-[200px] w-full bg-slate-200 ${loaded ? '' : 'animate-pulse'}`}>
         <iframe
           src={embedUrl}
           width="100%"
@@ -37,6 +41,7 @@ export default function SatelliteMap({
           allowFullScreen
           loading="lazy"
           title={`Satellite view of ${districtName}`}
+          onLoad={() => setLoaded(true)}
         />
       </div>
       <div className="border-t border-slate-100 px-4 py-1.5 bg-slate-50/50 text-[10px] text-slate-400 text-right">

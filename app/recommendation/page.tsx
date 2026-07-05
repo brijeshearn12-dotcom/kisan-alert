@@ -9,6 +9,7 @@ import { EntranceAnimation } from '@/components/EntranceAnimation'
 import { EmptyState } from '@/components/EmptyState'
 import { ListenButton } from '@/components/ListenButton'
 import SatelliteMap from '@/components/SatelliteMap'
+import VegetationIndexCard from '@/components/VegetationIndexCard'
 
 function langToLanguageCode(
   lang: 'en' | 'hi' | 'te' | 'mr'
@@ -148,6 +149,24 @@ const SOIL_DETAILS: Record<SoilTypeId, { description: string; icon: ReactNode }>
         <path d="M12 3v18" />
         <path d="M12 8c1.5-1.4 3-1.4 4.5 0M12 8c-1.5-1.4-3-1.4-4.5 0" />
         <path d="M12 13c1.5-1.4 3-1.4 4.5 0M12 13c-1.5-1.4-3-1.4-4.5 0" />
+      </svg>
+    ),
+  },
+  red: {
+    description: 'Iron-rich porous soil suitable for pulses and oilseeds.',
+    icon: (
+      <svg viewBox="0 0 24 24" {...stroke} aria-hidden="true">
+        <path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z" />
+        <path d="M12 6v12" />
+        <path d="M6 12h12" />
+      </svg>
+    ),
+  },
+  laterite: {
+    description: 'Acidic, leached soil rich in aluminium and iron oxides.',
+    icon: (
+      <svg viewBox="0 0 24 24" {...stroke} aria-hidden="true">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
       </svg>
     ),
   },
@@ -429,6 +448,15 @@ export default function RecommendationPage() {
             </section>
 
             <SatelliteMap
+              latitude={selectedDistrict?.latitude ?? null}
+              longitude={selectedDistrict?.longitude ?? null}
+              districtName={selectedDistrict?.name ?? ''}
+            />
+
+            {/* Vegetation & Moisture Index — hero feature. Estimates field
+                health from live 7-day rainfall + a manual soil-moisture reading;
+                independent of the crop-recommendation flow below. */}
+            <VegetationIndexCard
               latitude={selectedDistrict?.latitude ?? null}
               longitude={selectedDistrict?.longitude ?? null}
               districtName={selectedDistrict?.name ?? ''}

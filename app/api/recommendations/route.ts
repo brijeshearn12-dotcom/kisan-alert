@@ -19,6 +19,7 @@ import { getCropRecommendation } from '@/lib/gemini'
 import { translateText } from '@/lib/googleCloud'
 import { fetchWeatherSummary } from '@/lib/weather'
 import { SOIL_TYPES } from '@/lib/constants'
+import { getSeasonForMonth } from '@/lib/season'
 import { sendFirebaseNotification } from '@/lib/firebase'
 
 /** Valid soil ids, derived from the shared constant so the two never drift. */
@@ -33,15 +34,6 @@ function parseTargetLang(raw: unknown): TargetLang {
   return typeof raw === 'string' && TRANSLATABLE_LANGS.has(raw as TargetLang)
     ? (raw as TargetLang)
     : 'en'
-}
-
-type Season = 'kharif' | 'rabi' | 'summer'
-
-/** Derive the current agronomic season from the month (1 = Jan ... 12 = Dec). */
-function getSeasonForMonth(month: number): Season {
-  if (month >= 6 && month <= 9) return 'kharif' // June–September
-  if (month >= 10 || month <= 3) return 'rabi' // October–March
-  return 'summer' // April–May
 }
 
 interface DistrictRow {

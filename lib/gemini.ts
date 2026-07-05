@@ -298,6 +298,120 @@ export async function getCropRecommendation(
   }
 }
 
+// ── Vegetation & moisture advisory ───────────────────────────────────────────
+
+/** Context the model uses to describe today's vegetation condition. */
+export interface VegetationContext {
+  districtName: string
+  season: string
+  rainfallMm7d: number
+  soilMoisture: number
+  score: number
+  status: string
+}
+
+/** Shape returned to callers. `error` is only present on the fallback path. */
+export interface VegetationAdvice {
+  advice: string
+  error?: string
+}
+
+const VEGETATION_SYSTEM_INSTRUCTION =
+  'You are an agricultural advisor for Indian smallholder farmers. ' +
+  'You explain field conditions in very simple, everyday language a farmer can act on.'
+
+/**
+ * Deterministic one-sentence advisory used whenever the AI path is unavailable.
+ * Picks the single biggest contributing factor so the message stays actionable.
+ */
+function buildVegetationFallback(ctx: VegetationContext): string {
+  const statusText =
+    ctx.status === 'parched'
+      ? 'very dry'
+      : ctx.status === 'stressed'
+        ? 'a little dry'
+        : ctx.status === 'saturated'
+          ? 'very wet'
+          : 'healthy'
+
+  const driver =
+    ctx.rainfallMm7d < 10
+      ? 'low recent rainfall'
+      : ctx.soilMoisture < 30
+        ? 'dry soil'
+        : ctx.soilMoisture > 80 || ctx.rainfallMm7d > 80
+          ? 'high soil moisture and rainfall'
+          : 'good soil moisture and rainfall'
+
+  return `Your field looks ${statusText} today, mainly because of ${driver}.`
+}
+
+/** Build the vegetation advisory prompt (plain-text answer, not JSON). */
+function buildVegetationPrompt(ctx: VegetationContext): string {
+  return [
+    "Describe today's vegetation and soil-moisture condition for this field.",
+    '',
+    `District: ${ctx.districtName}, Maharashtra, India`,
+    `Season: ${ctx.season}`,
+    `Soil moisture: ${ctx.soilMoisture}%`,
+    `Expected rainfall (next 7 days): ${ctx.rainfallMm7d} mm`,
+    `Computed vegetation index: ${ctx.score}/100 (${ctx.status})`,
+    '',
+    'Rules for your answer:',
+    '- Explain the condition in ONE simple sentence for a farmer.',
+    '- Mention the single biggest contributing factor.',
+    '- Avoid technical language and jargon.',
+    '- Keep it under 25 words.',
+    '- Reply with the sentence only — no preamble, labels, or quotation marks.',
+  ].join('\n')
+}
+
+/**
+ * Produce a one-sentence, farmer-friendly explanation of today's vegetation
+ * condition using Gemini. Reuses the shared client, model, and timeout.
+ *
+ * Always resolves — never throws. On any failure it returns a deterministic
+ * fallback sentence with `error` populated.
+ */
+export async function getVegetationAdvice(
+  ctx: VegetationContext,
+): Promise<VegetationAdvice> {
+  const fallback = buildVegetationFallback(ctx)
+
+  const apiKey = process.env.GEMINI_API_KEY?.trim()
+  if (!apiKey) {
+    return { advice: fallback, error: 'GEMINI_API_KEY is not configured.' }
+  }
+
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({
+      model: MODEL_NAME,
+      systemInstruction: VEGETATION_SYSTEM_INSTRUCTION,
+      generationConfig: { temperature: 0.4 },
+    })
+
+    const result = await Promise.race([
+      model.generateContent(buildVegetationPrompt(ctx)),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error('Gemini request timed out.')),
+          REQUEST_TIMEOUT_MS,
+        ),
+      ),
+    ])
+
+    const text = result.response.text().trim().replace(/^["']|["']$/g, '')
+    if (!text) return { advice: fallback, error: 'Gemini returned an empty response.' }
+
+    return { advice: text }
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Unknown Gemini error.'
+    return { advice: fallback, error: message }
+  }
+}
+
 // ── Disease diagnosis ────────────────────────────────────────────────────────
 
 /** Shape returned to callers. `error` is only present on the fallback path. */

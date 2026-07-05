@@ -122,6 +122,49 @@ export const cropLookup = {
     'Okra (Bhindi)',
     'Watermelon',
   ],
+
+  // ── Red soil zones (Pan-India) ──────────────────────────────────────────────
+  'red-kharif': [
+    'Ragi (Finger Millet)',
+    'Groundnut',
+    'Red Gram (Tur)',
+    'Rice (Paddy)',
+    'Castor',
+    'Cotton',
+  ],
+  'red-rabi': [
+    'Horse Gram',
+    'Chickpea (Gram)',
+    'Sorghum (Jowar)',
+    'Mustard',
+    'Sesame',
+  ],
+  'red-summer': [
+    'Green Gram (Moong)',
+    'Cowpea',
+    'Sesame (Til)',
+    'Watermelon',
+  ],
+
+  // ── Laterite soil zones (Pan-India) ─────────────────────────────────────────
+  'laterite-kharif': [
+    'Rice (Paddy)',
+    'Ragi (Finger Millet)',
+    'Tapioca',
+    'Cashew Nut',
+    'Groundnut',
+  ],
+  'laterite-rabi': [
+    'Horse Gram',
+    'Black Gram (Urad)',
+    'Sesame',
+    'Linseed',
+  ],
+  'laterite-summer': [
+    'Sweet Potato',
+    'Cowpea',
+    'Cucumber',
+  ],
 } as const
 
 /** Union of every valid lookup key, derived from the data -- never hand-maintained. */

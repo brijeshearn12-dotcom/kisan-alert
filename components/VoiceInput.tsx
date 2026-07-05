@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import VoiceWaveform from '@/components/VoiceWaveform'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -211,7 +212,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
 
       {/* ── Recording: countdown + stop button ─── */}
       {state === 'recording' && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-center space-y-3 animate-pulse">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-center space-y-3">
           <div className="flex items-center justify-center gap-2">
             <span className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
@@ -221,6 +222,8 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
               Recording… {countdown}s
             </span>
           </div>
+
+          <VoiceWaveform stream={streamRef.current} isRecording={state === 'recording'} />
 
           <div className="h-1.5 w-full rounded-full bg-rose-100 overflow-hidden">
             <div

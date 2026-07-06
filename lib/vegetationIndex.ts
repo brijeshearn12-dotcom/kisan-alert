@@ -78,6 +78,62 @@ export function statusForScore(score: number): VegetationStatus {
   return 'saturated'
 }
 
+// ── Automatic soil-moisture estimation ───────────────────────────────────────
+// Phase B: the manual soil-moisture slider was removed. Instead we estimate a
+// 0–100 soil-moisture reading from the live weather we already fetch, so the
+// recommendation engine keeps receiving a moisture signal with zero user input.
+
+/** Farmer-friendly moisture bucket. */
+export type MoistureLevel = 'low' | 'moderate' | 'high'
+
+/** The estimated reading returned by {@link estimateSoilMoisture}. */
+export interface SoilMoistureEstimate {
+  /** Whole-number estimate in the range 0–100 (%). */
+  percent: number
+  level: MoistureLevel
+}
+
+/** Weekly rainfall (mm) at or above which the rainfall signal is "full". */
+const EST_RAINFALL_FULL_MM = 50
+
+/**
+ * Estimate soil moisture from current weather.
+ *
+ * Deterministic and side-effect-free. Combines three signals we already have:
+ *   • 7-day rainfall  — the dominant driver of how wet the soil is (60%)
+ *   • humidity        — moist air slows evaporation, keeping soil damp (30%)
+ *   • temperature     — heat dries soil out; a penalty above ~30°C (10%)
+ *
+ * The weights are a transparent heuristic, not a soil-physics model — it exists
+ * only to replace the manual slider with a sensible auto value. Returns a
+ * mid-range default when no weather is available so downstream logic (and the
+ * Gemini prompt) still receives a usable number.
+ */
+export function estimateSoilMoisture(
+  rainfallMm7d: number,
+  humidityPct: number,
+  temperatureC: number,
+): SoilMoistureEstimate {
+  const rainfallSignal =
+    clamp(Math.max(0, rainfallMm7d), 0, EST_RAINFALL_FULL_MM) / EST_RAINFALL_FULL_MM
+  const humiditySignal = clamp(humidityPct, 0, 100) / 100
+  // Heat penalty ramps in from 20°C and maxes out around 40°C.
+  const heatPenalty = clamp((temperatureC - 20) / 20, 0, 1)
+
+  const raw =
+    rainfallSignal * 60 + humiditySignal * 30 + (1 - heatPenalty) * 10
+
+  const percent = Math.round(clamp(raw, 0, 100))
+  return { percent, level: moistureLevelForPercent(percent) }
+}
+
+/** Map a 0–100 soil-moisture percent onto a coarse Low/Moderate/High bucket. */
+export function moistureLevelForPercent(percent: number): MoistureLevel {
+  if (percent < 35) return 'low'
+  if (percent < 65) return 'moderate'
+  return 'high'
+}
+
 // ── Core scoring ─────────────────────────────────────────────────────────────
 
 /**

@@ -328,7 +328,7 @@ export default function PhotoUpload({
         onError?.(message)
       }
     },
-    [maxDimension, quality, setPreview, onUpload, onError, t],
+    [maxDimension, quality, setPreview, onUpload, onError, t, language],
   )
 
   const onInputChange = useCallback(

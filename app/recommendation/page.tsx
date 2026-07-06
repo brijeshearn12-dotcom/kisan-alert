@@ -3,19 +3,20 @@
 import { forwardRef, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import { SOIL_TYPES, type SoilTypeId } from '@/lib/constants'
+import { type SoilTypeId } from '@/lib/constants'
 import { confidenceStyle } from '@/lib/confidence'
 import { EntranceAnimation } from '@/components/EntranceAnimation'
 import { EmptyState } from '@/components/EmptyState'
 import { ListenButton } from '@/components/ListenButton'
-import VegetationIndexCard from '@/components/VegetationIndexCard'
-import SoilMoistureSlider from '@/components/SoilMoistureSlider'
 import DemoPresetChips from '@/components/DemoPresetChips'
 import type { CurrentWeather } from '@/lib/weather'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toSpeechLocale } from '@/lib/i18n/speech'
 import type { LanguageCode, TranslationKey } from '@/lib/i18n/translations'
 import { getCropTranslationKey, formatNumber } from '@/lib/i18n/translations'
+import { getSeasonForMonth } from '@/lib/season'
+import { computeIndex, estimateSoilMoisture, moistureLevelForPercent } from '@/lib/vegetationIndex'
+import EnvironmentalConditionsCard from '@/components/EnvironmentalConditionsCard'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -74,81 +75,7 @@ function displayFields(
 
 // ── Soil presentation (copy + icons live here; ids/labels come from constants)─
 
-const stroke = {
-  fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: 1.6,
-  strokeLinecap: 'round' as const,
-  strokeLinejoin: 'round' as const,
-}
 
-const SOIL_DETAILS: Record<SoilTypeId, { description: string; icon: ReactNode }> = {
-  sandy: {
-    description: 'Light, fast-draining soil that warms early in the season.',
-    icon: (
-      <svg viewBox="0 0 24 24" {...stroke} aria-hidden="true">
-        <path d="M3 16c2-2 3-2 4.5 0S11 18 12 16s2.5-2 4.5 0 2 2 4.5 0" />
-        <path d="M3 11c2-2 3-2 4.5 0S11 13 12 11s2.5-2 4.5 0 2 2 4.5 0" />
-      </svg>
-    ),
-  },
-  loamy: {
-    description: 'Balanced, fertile soil — ideal for most field crops.',
-    icon: (
-      <svg viewBox="0 0 24 24" {...stroke} aria-hidden="true">
-        <path d="M12 20v-7" />
-        <path d="M12 13c0-3 2-5 5-5 0 3-2 5-5 5Z" />
-        <path d="M12 15c0-2.5-1.8-4.5-4.5-4.5 0 2.7 2 4.5 4.5 4.5Z" />
-      </svg>
-    ),
-  },
-  clayey: {
-    description: 'Heavy, moisture-retentive soil that holds water well.',
-    icon: (
-      <svg viewBox="0 0 24 24" {...stroke} aria-hidden="true">
-        <path d="M4 8.5 12 5l8 3.5-8 3.5-8-3.5Z" />
-        <path d="m4 12 8 3.5L20 12" />
-        <path d="m4 15.5 8 3.5 8-3.5" />
-      </svg>
-    ),
-  },
-  black_cotton: {
-    description: 'Rich black soil with high clay content and good fertility.',
-    icon: (
-      <svg viewBox="0 0 24 24" {...stroke} aria-hidden="true">
-        <path d="M12 3v18" />
-        <path d="M12 8c1.5-1.4 3-1.4 4.5 0M12 8c-1.5-1.4-3-1.4-4.5 0" />
-        <path d="M12 13c1.5-1.4 3-1.4 4.5 0M12 13c-1.5-1.4-3-1.4-4.5 0" />
-      </svg>
-    ),
-  },
-  red: {
-    description: 'Iron-rich porous soil suitable for pulses and oilseeds.',
-    icon: (
-      <svg viewBox="0 0 24 24" {...stroke} aria-hidden="true">
-        <path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z" />
-        <path d="M12 6v12" />
-        <path d="M6 12h12" />
-      </svg>
-    ),
-  },
-  laterite: {
-    description: 'Acidic, leached soil rich in aluminium and iron oxides.',
-    icon: (
-      <svg viewBox="0 0 24 24" {...stroke} aria-hidden="true">
-        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-      </svg>
-    ),
-  },
-}
-
-// ── Small inline icons ──────────────────────────────────────────────────────
-
-const CheckIcon = (
-  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="m20 6-11 11-5-5" />
-  </svg>
-)
 
 const ChevronIcon = (
   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -192,6 +119,19 @@ const LeafIcon = (
   </svg>
 )
 
+const MapPinIcon = (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
+    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+)
+
+const SparklesIcon = (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
+    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+  </svg>
+)
+
 // ── Page ────────────────────────────────────────────────────────────────────
 
 export default function RecommendationPage() {
@@ -202,7 +142,7 @@ export default function RecommendationPage() {
   const [districts, setDistricts] = useState<District[]>([])
   const [selectedState, setSelectedState] = useState('')
   const [districtId, setDistrictId] = useState('')
-  const [soil, setSoil] = useState<SoilTypeId | null>(null)
+  const [soil, setSoil] = useState<SoilTypeId>('loamy')
 
   const states = useMemo(() => {
     const list = districts.map((d) => d.state).filter(Boolean)
@@ -222,8 +162,27 @@ export default function RecommendationPage() {
   const [result, setResult] = useState<Recommendation | null>(null)
   const [weather, setWeather] = useState<CurrentWeather | null>(null)
   const [weatherLoading, setWeatherLoading] = useState(false)
-  const [weatherFetchedAt, setWeatherFetchedAt] = useState<Date | null>(null)
   const [soilMoisture, setSoilMoisture] = useState(50)
+
+  const LOADING_STEPS = [
+    'recommendation.loading.weather',
+    'recommendation.loading.moisture',
+    'recommendation.loading.analyzing',
+    'recommendation.loading.selecting',
+    'recommendation.loading.preparing',
+  ] as const
+
+  const [loadingStepIndex, setLoadingStepIndex] = useState(0)
+
+  useEffect(() => {
+    if (!submitting) return
+
+    const interval = setInterval(() => {
+      setLoadingStepIndex((prev) => (prev + 1) % 5)
+    }, 1500)
+
+    return () => clearInterval(interval)
+  }, [submitting])
 
   // Fetch weather at page level when selected district coordinates change
   useEffect(() => {
@@ -231,7 +190,7 @@ export default function RecommendationPage() {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- reset weather when no district is selected
       setWeather(null)
       setWeatherLoading(false)
-      setWeatherFetchedAt(null)
+      setSoilMoisture(50)
       return
     }
 
@@ -247,19 +206,48 @@ export default function RecommendationPage() {
         if (!active) return
         setWeather(data.weather)
         setWeatherLoading(false)
-        setWeatherFetchedAt(new Date())
+        if (data.weather) {
+          const rain7d = Math.round(
+            data.weather.forecast.reduce((sum, day) => sum + day.precipitation, 0) * 10
+          ) / 10
+          const est = estimateSoilMoisture(rain7d, data.weather.humidity, data.weather.temperature)
+          setSoilMoisture(est.percent)
+        } else {
+          setSoilMoisture(50)
+        }
       })
       .catch(() => {
         if (!active) return
         setWeather(null)
         setWeatherLoading(false)
-        setWeatherFetchedAt(null)
+        setSoilMoisture(50)
       })
 
     return () => {
       active = false
     }
   }, [selectedDistrict])
+
+  const rainfallMm7d = useMemo(() => {
+    if (!weather) return 0
+    return Math.round(
+      weather.forecast.reduce((sum, day) => sum + day.precipitation, 0) * 10,
+    ) / 10
+  }, [weather])
+
+  const moistureLevel = useMemo(() => {
+    return moistureLevelForPercent(soilMoisture)
+  }, [soilMoisture])
+
+  const season = useMemo(() => {
+    const month = new Date().getMonth() + 1
+    return getSeasonForMonth(month)
+  }, [])
+
+  const computedVegIndex = useMemo(() => {
+    return computeIndex(soilMoisture, rainfallMm7d, season)
+  }, [soilMoisture, rainfallMm7d, season])
+
   const [formError, setFormError] = useState<string | null>(null)
 
   // Language is global now: the single selector in the layout drives it, and the
@@ -283,7 +271,7 @@ export default function RecommendationPage() {
 
       const [{ data: districtRows, error: districtError }, { data: profile }] = await Promise.all([
         supabase.from('districts').select('id, name, state, latitude, longitude').order('name'),
-        supabase.from('users').select('district_id').eq('id', user.id).single(),
+        supabase.from('users').select('district_id, soil_type').eq('id', user.id).single(),
       ])
 
       if (!active) return
@@ -302,6 +290,14 @@ export default function RecommendationPage() {
         setSelectedState(defaultDistrict.state)
         setDistrictId(defaultDistrict.id)
       }
+
+      const preferredSoil = profile?.soil_type as SoilTypeId | undefined
+      if (preferredSoil && ['sandy', 'loamy', 'clayey', 'black_cotton', 'red', 'laterite'].includes(preferredSoil)) {
+        setSoil(preferredSoil)
+      } else {
+        setSoil('loamy')
+      }
+
       setInitState('ready')
     }
 
@@ -333,6 +329,7 @@ export default function RecommendationPage() {
     if (!targetDistrictId || submitting) return
 
     setSubmitting(true)
+    setLoadingStepIndex(0)
     setFormError(null)
     setResult(null)
 
@@ -344,6 +341,7 @@ export default function RecommendationPage() {
           district_id: targetDistrictId,
           soil_type: targetSoil,
           target_lang: lang,
+          soil_moisture_pct: soilMoisture,
         }),
       })
       const data: Recommendation & { error?: string } = await res.json()
@@ -392,10 +390,9 @@ export default function RecommendationPage() {
   function handleReset() {
     setResult(null)
     setFormError(null)
-    setSoil(null)
   }
 
-  const canGenerate = initState === 'ready' && !!soil && !!districtId && !submitting
+  const canGenerate = initState === 'ready' && !!districtId && !submitting
 
   return (
     <main className="min-h-screen bg-slate-50 font-sans" aria-busy={submitting}>
@@ -468,9 +465,7 @@ export default function RecommendationPage() {
             />
 
             {/* ── SECTION 3: Recommendation form ──────────────────────────────
-                A single, scannable card: location → soil → moisture → CTA.
-                This is the only thing competing for attention before a result
-                exists. */}
+                A single, scannable card: location → CTA. */}
             <section
               aria-label={t('recommendation.cropAdvisory')}
               className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
@@ -533,71 +528,8 @@ export default function RecommendationPage() {
                 </div>
               </div>
 
-              {/* Soil selection — compact chips (icon + label). Descriptions were
-                  removed to keep the form scannable; the radio semantics stay. */}
-              <fieldset className="mt-5">
-                <legend className="mb-2.5 text-sm font-medium text-slate-700">
-                  {t('recommendation.form.soilType')}
-                </legend>
-                <div
-                  role="radiogroup"
-                  aria-label={t('recommendation.form.soilType')}
-                  className="grid grid-cols-2 gap-2 sm:grid-cols-3"
-                >
-                  {SOIL_TYPES.map((option) => {
-                    const selected = soil === option.id
-                    const detail = SOIL_DETAILS[option.id]
-                    return (
-                      <button
-                        key={option.id}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        title={t(`soil.${option.id}.desc` as TranslationKey)}
-                        onClick={() => setSoil(option.id)}
-                        className={[
-                          'group flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all duration-200',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 focus-visible:ring-offset-1',
-                          selected
-                            ? 'border-primary-green bg-primary-green/5 ring-1 ring-primary-green/10'
-                            : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50',
-                        ].join(' ')}
-                      >
-                        <span
-                          className={[
-                            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors',
-                            selected
-                              ? 'bg-primary-green/10 text-primary-green'
-                              : 'bg-slate-100 text-slate-500 group-hover:text-slate-600',
-                          ].join(' ')}
-                        >
-                          <span className="h-[18px] w-[18px]">{detail.icon}</span>
-                        </span>
-                        <span className="min-w-0 flex-1 text-[13px] font-medium leading-tight text-slate-800">
-                          {t(`soil.${option.id}.label` as TranslationKey)}
-                        </span>
-                        {selected && (
-                          <span
-                            className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary-green text-white"
-                            aria-hidden="true"
-                          >
-                            {CheckIcon}
-                          </span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              </fieldset>
-
-              {/* Soil moisture — moved into the form so the reading lives with the
-                  other inputs (the Vegetation card reuses this same value). */}
-              <div className="mt-5">
-                <SoilMoistureSlider value={soilMoisture} onChange={setSoilMoisture} bare />
-              </div>
-
               {/* Generate — the single primary CTA on the page. */}
-              <div className="mt-6 space-y-2">
+              <div className="mt-6">
                 <button
                   type="button"
                   onClick={handleGenerate}
@@ -607,30 +539,35 @@ export default function RecommendationPage() {
                   {submitting ? (
                     <>
                       <LoadingDots />
-                      <span>{t('recommendation.form.generating')}</span>
+                      <span>{t(LOADING_STEPS[loadingStepIndex] as TranslationKey)}</span>
                     </>
                   ) : (
                     t('recommendation.form.generateBtn')
                   )}
                 </button>
-
-                {!soil && (
-                  <p className="text-center text-xs text-slate-400">
-                    {t('recommendation.form.selectSoilPrompt')}
-                  </p>
-                )}
               </div>
             </section>
 
-            {/* Error */}
+            {/* Error with Retry */}
             {formError && (
               <div
                 role="alert"
                 aria-live="assertive"
-                className="mt-5 flex items-start gap-2.5 rounded-xl border border-rose-100 bg-rose-50/60 p-3.5 text-sm text-rose-700"
+                className="mt-5 rounded-xl border border-rose-100 bg-rose-50/60 p-3.5 text-sm text-rose-700"
               >
-                <span className="mt-0.5 shrink-0 text-rose-500">{WarningIcon}</span>
-                <p className="leading-relaxed">{formError}</p>
+                <div className="flex items-start gap-2.5">
+                  <span className="mt-0.5 shrink-0 text-rose-500">{WarningIcon}</span>
+                  <div className="flex-1">
+                    <p className="leading-relaxed">{formError}</p>
+                    <button
+                      type="button"
+                      onClick={handleGenerate}
+                      className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-rose-800 underline transition-colors hover:text-rose-950 focus:outline-none"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -646,40 +583,35 @@ export default function RecommendationPage() {
               />
             )}
 
-            {/* ── SECTION 5: Supporting environmental data (below the hero) ────
-                Weather + vegetation index. Revealed once a district is chosen;
-                kept visually quieter than the recommendation above. */}
+            {/* Empty States */}
+            {!submitting && !result && (
+              <div className="mt-5">
+                {!districtId ? (
+                  <EmptyState
+                    icon={MapPinIcon}
+                    title={t('recommendation.empty.district.title')}
+                    description={t('recommendation.empty.district.body')}
+                  />
+                ) : (
+                  <EmptyState
+                    icon={SparklesIcon}
+                    title={t('recommendation.empty.result.title')}
+                    description={t('recommendation.empty.result.body')}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* ── SECTION 5: Supporting environmental data (below the hero) ──── */}
             {selectedDistrict && (
               <section aria-label={t('recommendation.section.environmental')} className="mt-10">
-                <div className="mb-4">
-                  <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-500">
-                    {t('recommendation.section.environmental')}
-                  </h2>
-                  <p className="mt-1 text-xs text-slate-400">
-                    {t('recommendation.section.environmentalHint')}
-                  </p>
-                </div>
-
-                {/* Compact live-weather strip (reuses the page-level weather). */}
-                <WeatherSummary weather={weather} loading={weatherLoading} />
-
-                {/* Vegetation & moisture index — collapsed by default so its
-                    depth of detail never competes with the recommendation. Its
-                    slider is hidden (the form owns the shared value). */}
-                <Accordion title={t('veg.indexTitle')} className="mt-4">
-                  <VegetationIndexCard
-                    latitude={selectedDistrict?.latitude ?? null}
-                    longitude={selectedDistrict?.longitude ?? null}
-                    districtName={selectedDistrict?.name ?? ''}
-                    stateName={selectedDistrict?.state ?? ''}
-                    externalWeather={weather}
-                    externalWeatherLoading={weatherLoading}
-                    externalFetchedAt={weatherFetchedAt}
-                    soilMoisture={soilMoisture}
-                    onSoilMoistureChange={setSoilMoisture}
-                    hideSlider
-                  />
-                </Accordion>
+                <EnvironmentalConditionsCard
+                  weather={weather}
+                  weatherLoading={weatherLoading}
+                  vegetationStatus={computedVegIndex.status}
+                  moistureLevel={moistureLevel}
+                  moisturePercent={soilMoisture}
+                />
               </section>
             )}
           </>
@@ -901,54 +833,7 @@ function Accordion({
   )
 }
 
-// ── Weather summary strip (compact, reuses the page-level weather) ───────────
 
-function WeatherSummary({
-  weather,
-  loading,
-}: {
-  weather: CurrentWeather | null
-  loading: boolean
-}) {
-  const { t, language } = useLanguage()
-
-  const metrics: { label: string; value: string }[] = weather
-    ? [
-        { label: t('hud.temp'), value: `${formatNumber(Math.round(weather.temperature), language)}°C` },
-        { label: t('hud.humidity'), value: `${formatNumber(Math.round(weather.humidity), language)}%` },
-        { label: t('hud.rain'), value: `${formatNumber(weather.rainfall, language)} mm` },
-      ]
-    : []
-
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">
-        {t('veg.liveWeather')}
-      </p>
-      {loading ? (
-        <div className="grid grid-cols-3 gap-3" aria-hidden="true">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="h-12 animate-pulse rounded-xl bg-slate-100" />
-          ))}
-        </div>
-      ) : weather ? (
-        <div className="grid grid-cols-3 gap-3">
-          {metrics.map((m) => (
-            <div
-              key={m.label}
-              className="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-slate-50/60 px-2 py-2.5 text-center"
-            >
-              <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{m.label}</span>
-              <span className="mt-1 text-sm font-semibold tabular-nums text-slate-900">{m.value}</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-slate-400">{t('veg.rainfallUnavailable')}</p>
-      )}
-    </div>
-  )
-}
 
 // ── Loading skeleton (mirrors the result card) ──────────────────────────────
 

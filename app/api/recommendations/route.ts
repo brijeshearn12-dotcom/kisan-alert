@@ -291,21 +291,34 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
 
     if (targetLang !== 'en') {
       const [reasoning, fertilization_tip, irrigation_advice] = await Promise.all([
-        translateText(recommendation.reasoning, targetLang),
-        translateText(recommendation.fertilization_tip, targetLang),
-        translateText(recommendation.irrigation_advice, targetLang),
+        translateText(recommendation.bestCrop.summary, targetLang),
+        translateText(recommendation.bestCrop.fertilization_tip, targetLang),
+        translateText(recommendation.bestCrop.irrigation_advice, targetLang),
       ])
       translated = { reasoning, fertilization_tip, irrigation_advice }
     }
 
-    const reasoningToSave = translated?.reasoning || recommendation.reasoning
+    const cleanSummary = translated?.reasoning || recommendation.bestCrop.summary
+    const cleanFert = translated?.fertilization_tip || recommendation.bestCrop.fertilization_tip
+    const cleanIrr = translated?.irrigation_advice || recommendation.bestCrop.irrigation_advice
+
+    const reasoningToSave = JSON.stringify({
+      bestCrop: {
+        ...recommendation.bestCrop,
+        summary: cleanSummary,
+        fertilization_tip: cleanFert,
+        irrigation_advice: cleanIrr,
+      },
+      alternatives: recommendation.alternatives,
+      originalSummary: cleanSummary,
+    })
 
     // ── 7. Persist (best-effort; a write failure must not lose the result) ─
     const { error: insertError } = await supabase.from('recommendations').insert({
       user_id: userId,
-      crop_name: recommendation.crop_name,
+      crop_name: recommendation.bestCrop.cropName,
       reasoning: reasoningToSave,
-      confidence_score: recommendation.confidence_score,
+      confidence_score: recommendation.bestCrop.suitabilityScore / 100,
     })
 
     if (isDev) {
@@ -336,7 +349,7 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
     // must match the selected language — translate the English templates before
     // storing them. translateText() never throws (returns the original on
     // failure), so a translation outage degrades to English rather than erroring.
-    let recMessage = `🌾 Your crop recommendation is ready: ${recommendation.crop_name}`
+    let recMessage = `🌾 Your crop recommendation is ready: ${recommendation.bestCrop.cropName}`
     let drySpellMessage = '⚠️ Dry spell detected. Irrigation recommended for your crop.'
     if (targetLang !== 'en') {
       const [translatedRec, translatedDry] = await Promise.all([
@@ -374,12 +387,19 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
     // ── 9. Respond ────────────────────────────────────────────────────────
     console.log({ location: "route.ts success respond block", recommendation })
     return NextResponse.json({
-      crop_name: recommendation.crop_name,
-      reasoning: recommendation.reasoning,
-      confidence_score: recommendation.confidence_score,
-      fertilization_tip: recommendation.fertilization_tip,
-      irrigation_advice: recommendation.irrigation_advice,
+      crop_name: recommendation.bestCrop.cropName,
+      reasoning: cleanSummary,
+      confidence_score: recommendation.bestCrop.suitabilityScore / 100,
+      fertilization_tip: cleanFert,
+      irrigation_advice: cleanIrr,
       is_dry_spell: weatherSummary.isDrySpell,
+      bestCrop: {
+        ...recommendation.bestCrop,
+        summary: cleanSummary,
+        fertilization_tip: cleanFert,
+        irrigation_advice: cleanIrr,
+      },
+      alternatives: recommendation.alternatives,
       // Present only when a non-English language was requested.
       ...(translated ? { translated } : {}),
       ...(recommendation.error ? { error: recommendation.error } : {}),

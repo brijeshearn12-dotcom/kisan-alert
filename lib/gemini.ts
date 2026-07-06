@@ -14,14 +14,20 @@ import { getLanguageMeta, type LanguageCode } from '@/lib/i18n/translations'
 import { translateText, type TargetLang } from '@/lib/googleCloud'
 
 /** Shape returned to callers. `error` is only present on the fallback path. */
-export interface CropRecommendation {
-  crop_name: string
-  reasoning: string
-  confidence_score: number
-  /** One practical, low-cost fertilizer action for the coming week. */
+export interface RankedCrop {
+  cropName: string
+  suitabilityScore: number // Whole number 0-100 representing suitability %
+  profitPotential: 'High' | 'Medium' | 'Low'
+  riskLevel: 'Low' | 'Medium' | 'High'
+  primaryReasons: string[]
+  summary: string
   fertilization_tip: string
-  /** One irrigation instruction based on crop stage and current weather. */
   irrigation_advice: string
+}
+
+export interface CropRecommendation {
+  bestCrop: RankedCrop
+  alternatives: RankedCrop[]
   error?: string
 }
 
@@ -51,21 +57,51 @@ function buildFallback(
   viableCrops: string[],
   errorMessage: string,
 ): CropRecommendation {
+  const bestCropName = viableCrops[0] ?? 'No crop available'
+  const alt1Name = viableCrops[1] ?? (viableCrops[0] ?? 'No crop available')
+  const alt2Name = viableCrops[2] ?? (viableCrops[0] ?? 'No crop available')
+
   return {
-    crop_name: viableCrops[0] ?? 'No crop available',
-    reasoning: FALLBACK_REASONING,
-    confidence_score: 0,
-    fertilization_tip:
-      'Apply a small, balanced dose of Urea or DAP as per your local practice once the AI service is back.',
-    irrigation_advice:
-      'Water your field based on soil moisture and the current weather until detailed advice is available.',
+    bestCrop: {
+      cropName: bestCropName,
+      suitabilityScore: 80,
+      profitPotential: 'Medium',
+      riskLevel: 'Medium',
+      primaryReasons: ['AI recommendation unavailable. Safest seasonal fallback choice.'],
+      summary: FALLBACK_REASONING,
+      fertilization_tip:
+        'Apply a small, balanced dose of Urea or DAP as per your local practice once the AI service is back.',
+      irrigation_advice:
+        'Water your field based on soil moisture and the current weather until detailed advice is available.',
+    },
+    alternatives: [
+      {
+        cropName: alt1Name,
+        suitabilityScore: 70,
+        profitPotential: 'Medium',
+        riskLevel: 'Medium',
+        primaryReasons: ['Alternative seasonal fallback crop.'],
+        summary: 'Safe secondary fallback choice.',
+        fertilization_tip: 'Apply standard fertilizer.',
+        irrigation_advice: 'Water standardly.',
+      },
+      {
+        cropName: alt2Name,
+        suitabilityScore: 60,
+        profitPotential: 'Medium',
+        riskLevel: 'Medium',
+        primaryReasons: ['Alternative seasonal fallback crop.'],
+        summary: 'Safe tertiary fallback choice.',
+        fertilization_tip: 'Apply standard fertilizer.',
+        irrigation_advice: 'Water standardly.',
+      },
+    ],
     error: errorMessage,
   }
 }
 
 /**
- * Construct the user prompt. The list of viable crops is the hard constraint —
- * the model must choose exactly one of these and nothing else.
+ * Construct the user prompt to return 3 distinct ranked crops.
  */
 function buildPrompt(
   soilType: string,
@@ -77,7 +113,7 @@ function buildPrompt(
   targetLangName: string,
 ): string {
   return [
-    'Recommend the single best crop for a smallholder farmer based on the data below.',
+    'Recommend the top 3 best crops for a smallholder farmer in order of suitability (rank #1, #2, #3) based on the data below.',
     '',
     `District: ${districtName}, State: ${stateName}, Country: India`,
     `Soil type: ${soilType}`,
@@ -86,28 +122,55 @@ function buildPrompt(
     `Expected rainfall (next 7 days): ${weatherSummary.expectedRainfall} mm`,
     `Dry spell expected: ${weatherSummary.isDrySpell ? 'yes' : 'no'}`,
     '',
-    'You MUST choose exactly one crop from this list of viable crops and never invent or suggest anything outside it:',
+    'You MUST choose exactly 3 different crops from this list of viable crops. Do not suggest crops outside this list:',
     viableCrops.map((crop) => `- ${crop}`).join('\n'),
     '',
-    'Consider the soil type, district, season, and weather summary. Be conservative when uncertain.',
-    `You MUST respond and write all fields (reasoning, fertilization_tip, irrigation_advice) entirely in the ${targetLangName} language.`,
-    'Respond with ONLY valid JSON (no markdown, no code fences, no commentary) in exactly this shape:',
-    `{"crop_name": "<one crop from the list>", "reasoning": "<2-3 simple sentences in ${targetLangName}>", "confidence_score": <number between 0 and 1>, "fertilization_tip": "<one sentence in ${targetLangName}>", "irrigation_advice": "<one sentence in ${targetLangName}>"}`,
+    'Evaluate suitability using current inputs (weather, soil type, estimated soil moisture, vegetation, season, district).',
+    `You MUST respond and write all text fields (primaryReasons, summary, fertilization_tip, irrigation_advice) entirely in the ${targetLangName} language.`,
+    'Respond with ONLY valid JSON (no markdown, no code fences, no commentary) in exactly this schema structure:',
+    '{',
+    '  "bestCrop": {',
+    '    "cropName": "<name of the rank #1 crop>",',
+    '    "suitabilityScore": <whole number 0-100 representing suitability %>,',
+    '    "profitPotential": "<High, Medium, or Low based on suitability, growing conditions, and agronomic practicality>",',
+    '    "riskLevel": "<Low, Medium, or High based on current environmental conditions>",',
+    '    "primaryReasons": ["<reason 1 in target language>", "<reason 2 in target language>", "<reason 3 in target language>"],',
+    '    "summary": "<one sentence in target language, max 2 sentences, describing suitability>",',
+    '    "fertilization_tip": "<one simple, low-cost fertilizer advice sentence in target language>",',
+    '    "irrigation_advice": "<one irrigation instruction sentence in target language based on crop stage and weather>"',
+    '  },',
+    '  "alternatives": [',
+    '    {',
+    '      "cropName": "<name of the rank #2 crop>",',
+    '      "suitabilityScore": <whole number 0-100 representing suitability %>,',
+    '      "profitPotential": "<High, Medium, or Low>",',
+    '      "riskLevel": "<Low, Medium, or High>",',
+    '      "primaryReasons": ["<reason 1 in target language>"],',
+    '      "summary": "<one sentence in target language, max 2 sentences>",',
+    '      "fertilization_tip": "<one simple fertilizer advice sentence in target language>",',
+    '      "irrigation_advice": "<one irrigation advice sentence in target language>"',
+    '    },',
+    '    {',
+    '      "cropName": "<name of the rank #3 crop>",',
+    '      "suitabilityScore": <whole number 0-100 representing suitability %>,',
+    '      "profitPotential": "<High, Medium, or Low>",',
+    '      "riskLevel": "<Low, Medium, or High>",',
+    '      "primaryReasons": ["<reason 1 in target language>"],',
+    '      "summary": "<one sentence in target language, max 2 sentences>",',
+    '      "fertilization_tip": "<one simple fertilizer advice sentence in target language>",',
+    '      "irrigation_advice": "<one irrigation advice sentence in target language>"',
+    '    }',
+    '  ]',
+    '}',
     '',
-    'fertilization_tip:',
-    '- Exactly ONE sentence.',
-    '- Practical and low-cost.',
-    '- Recommend the simplest fertilizer action for the coming week.',
-    '- Prefer fertilizers commonly available in India such as Urea or DAP when appropriate.',
-    `- Written in the ${targetLangName} language.`,
-    '- Use plain language suitable for farmers.',
-    '',
-    'irrigation_advice:',
-    '- Exactly ONE sentence.',
-    '- Recommend irrigation based on crop stage and current weather conditions.',
-    '- Keep the advice practical and easy to follow.',
-    `- Written in the ${targetLangName} language.`,
-    '- Use simple farmer-friendly language.',
+    'Rules:',
+    '- profitPotential MUST be exactly "High", "Medium", or "Low".',
+    '- riskLevel MUST be exactly "Low", "Medium", or "High".',
+    '- primaryReasons should be 1-3 extremely concise bullet points (max 10 words per bullet).',
+    '- summary should be a concise description of suitability, max 2 sentences.',
+    '- fertilization_tip should be exactly ONE sentence, recommending a low-cost, common fertilizer in India (like Urea/DAP).',
+    '- irrigation_advice should be exactly ONE sentence, recommending practical watering based on crop/weather.',
+    `- All text values except cropName must be written in the ${targetLangName} language.`
   ].join('\n')
 }
 
@@ -118,6 +181,63 @@ function stripCodeFences(text: string): string {
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/\s*```$/, '')
     .trim()
+}
+
+function normalizeRankedCrop(
+  raw: unknown,
+  viableCrops: string[],
+  defaultName: string,
+): RankedCrop {
+  const record = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>
+  const cropName = typeof record.cropName === 'string' && record.cropName.trim() !== ''
+    ? record.cropName.trim()
+    : defaultName
+
+  // Enforce constraint
+  const matchedCrop = viableCrops.find(
+    (c) => c.toLowerCase() === cropName.toLowerCase()
+  ) || defaultName
+
+  const suitabilityScore = typeof record.suitabilityScore === 'number' && Number.isFinite(record.suitabilityScore)
+    ? Math.min(100, Math.max(0, Math.round(record.suitabilityScore)))
+    : 75
+
+  let profitPotential: 'High' | 'Medium' | 'Low' = 'Medium'
+  if (typeof record.profitPotential === 'string' && ['High', 'Medium', 'Low'].includes(record.profitPotential)) {
+    profitPotential = record.profitPotential as 'High' | 'Medium' | 'Low'
+  }
+
+  let riskLevel: 'Low' | 'Medium' | 'High' = 'Medium'
+  if (typeof record.riskLevel === 'string' && ['Low', 'Medium', 'High'].includes(record.riskLevel)) {
+    riskLevel = record.riskLevel as 'Low' | 'Medium' | 'High'
+  }
+
+  const primaryReasons: string[] = Array.isArray(record.primaryReasons)
+    ? record.primaryReasons.filter((r): r is string => typeof r === 'string' && r.trim() !== '')
+    : ['Suitable for current environmental conditions.']
+
+  const summary = typeof record.summary === 'string' && record.summary.trim() !== ''
+    ? record.summary.trim()
+    : 'Recommended based on local soil and weather.'
+
+  const fertilization_tip = typeof record.fertilization_tip === 'string' && record.fertilization_tip.trim() !== ''
+    ? record.fertilization_tip.trim()
+    : 'Apply common fertilizer according to local practice.'
+
+  const irrigation_advice = typeof record.irrigation_advice === 'string' && record.irrigation_advice.trim() !== ''
+    ? record.irrigation_advice.trim()
+    : 'Water field according to crop and weather.'
+
+  return {
+    cropName: matchedCrop,
+    suitabilityScore,
+    profitPotential,
+    riskLevel,
+    primaryReasons,
+    summary,
+    fertilization_tip,
+    irrigation_advice,
+  }
 }
 
 /**
@@ -131,49 +251,35 @@ function normalizeModelOutput(
   if (typeof parsed !== 'object' || parsed === null) return null
 
   const record = parsed as Record<string, unknown>
-  const rawName = record.crop_name
-  const rawReasoning = record.reasoning
-  const rawScore = record.confidence_score
-  const rawFertilization = record.fertilization_tip
-  const rawIrrigation = record.irrigation_advice
+  const rawBest = record.bestCrop
+  const rawAlts = record.alternatives
 
-  if (typeof rawName !== 'string' || rawName.trim() === '') return null
+  if (!rawBest) return null
 
-  // Enforce the hard constraint: the crop must be one of the viable crops.
-  // Match case-insensitively so minor formatting differences still resolve.
-  const matchedCrop = viableCrops.find(
-    (crop) => crop.toLowerCase() === rawName.trim().toLowerCase(),
+  const bestCrop = normalizeRankedCrop(rawBest, viableCrops, viableCrops[0] ?? 'No crop available')
+
+  // Find remaining viable crops for fallback padding
+  const remainingViable = viableCrops.filter(
+    (c) => c.toLowerCase() !== bestCrop.cropName.toLowerCase()
   )
-  if (!matchedCrop) return null
 
-  const reasoning =
-    typeof rawReasoning === 'string' && rawReasoning.trim() !== ''
-      ? rawReasoning.trim()
-      : 'Recommended based on the soil, season, and recent weather.'
+  const alternatives: RankedCrop[] = []
+  if (Array.isArray(rawAlts)) {
+    for (let i = 0; i < rawAlts.length; i++) {
+      const defaultName = remainingViable[i] ?? viableCrops[0] ?? 'No crop available'
+      alternatives.push(normalizeRankedCrop(rawAlts[i], viableCrops, defaultName))
+    }
+  }
 
-  // Coerce + clamp the score into [0, 1]; default to a conservative 0.5.
-  const numericScore =
-    typeof rawScore === 'number' && Number.isFinite(rawScore) ? rawScore : 0.5
-  const confidence_score = Math.min(1, Math.max(0, numericScore))
-
-  // The two advisory fields are required in our contract but must never cause a
-  // valid crop pick to be discarded — fall back to safe generic guidance.
-  const fertilization_tip =
-    typeof rawFertilization === 'string' && rawFertilization.trim() !== ''
-      ? rawFertilization.trim()
-      : 'Apply a light, balanced dose of Urea or DAP this week as per local practice.'
-
-  const irrigation_advice =
-    typeof rawIrrigation === 'string' && rawIrrigation.trim() !== ''
-      ? rawIrrigation.trim()
-      : 'Irrigate lightly based on soil moisture and this week’s weather.'
+  // Ensure we have exactly 2 alternatives
+  while (alternatives.length < 2) {
+    const defaultName = remainingViable[alternatives.length] ?? viableCrops[0] ?? 'No crop available'
+    alternatives.push(normalizeRankedCrop(null, viableCrops, defaultName))
+  }
 
   return {
-    crop_name: matchedCrop,
-    reasoning,
-    confidence_score,
-    fertilization_tip,
-    irrigation_advice,
+    bestCrop,
+    alternatives: alternatives.slice(0, 2),
   }
 }
 
@@ -209,7 +315,7 @@ export async function getCropRecommendation(
     if (targetLang !== 'en') {
       suffix = await translateText(suffix, targetLang as TargetLang)
     }
-    fallback.irrigation_advice += suffix
+    fallback.bestCrop.irrigation_advice += suffix
     return fallback
   }
 
@@ -227,7 +333,7 @@ export async function getCropRecommendation(
     if (targetLang !== 'en') {
       suffix = await translateText(suffix, targetLang as TargetLang)
     }
-    fallback.irrigation_advice += suffix
+    fallback.bestCrop.irrigation_advice += suffix
     return fallback
   }
 
@@ -284,7 +390,7 @@ export async function getCropRecommendation(
       if (targetLang !== 'en') {
         suffix = await translateText(suffix, targetLang as TargetLang)
       }
-      fallback.irrigation_advice += suffix
+      fallback.bestCrop.irrigation_advice += suffix
       return fallback
     }
 
@@ -305,7 +411,7 @@ export async function getCropRecommendation(
       if (targetLang !== 'en') {
         suffix = await translateText(suffix, targetLang as TargetLang)
       }
-      fallback.irrigation_advice += suffix
+      fallback.bestCrop.irrigation_advice += suffix
       return fallback
     }
 
@@ -320,7 +426,7 @@ export async function getCropRecommendation(
     if (targetLang !== 'en') {
       suffix = await translateText(suffix, targetLang as TargetLang)
     }
-    normalized.irrigation_advice += suffix
+    normalized.bestCrop.irrigation_advice += suffix
     return normalized
   } catch (error) {
     const message =
@@ -337,7 +443,7 @@ export async function getCropRecommendation(
     if (targetLang !== 'en') {
       suffix = await translateText(suffix, targetLang as TargetLang)
     }
-    fallback.irrigation_advice += suffix
+    fallback.bestCrop.irrigation_advice += suffix
     return fallback
   }
 }

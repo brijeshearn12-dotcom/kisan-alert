@@ -23,6 +23,10 @@ interface DiseaseCheckResponse {
   severity?: 'LOW' | 'MEDIUM' | 'HIGH' | null
   spread_risk?: 'LOW' | 'MEDIUM' | 'HIGH' | null
   immediate_action?: string | null
+  organic_treatment?: string | null
+  chemical_treatment?: string | null
+  prevention?: string | null
+  monitoring?: string | null
   escalated: boolean
   case_id: string | null
   disease_check_id: string | null
@@ -77,6 +81,34 @@ const RefreshIcon = (
   </svg>
 )
 
+const OrganicIcon = (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600">
+    <path d="M12 2a15 15 0 0 0-3 9c0 4.4 3.6 8 8 8a8 8 0 0 0 8-8c0-3.3-3.6-9-13-9Z" />
+    <path d="M12 2A15 15 0 0 1 15 11c0 4.4-3.6 8-8 8A8 8 0 0 1 1 11c0-3.3 3.6-9 11-9Z" />
+  </svg>
+)
+
+const ChemicalIcon = (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
+    <path d="M4.5 3h15" />
+    <path d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3" />
+    <path d="M6 14h12" />
+  </svg>
+)
+
+const PreventionIcon = (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+  </svg>
+)
+
+const MonitoringIcon = (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="text-amber-600">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+)
+
 // ── Confidence styling ───────────────────────────────────────────────────────
 
 function confidenceStyle(score: number, t: (key: TranslationKey) => string): {
@@ -113,6 +145,27 @@ function confidenceStyle(score: number, t: (key: TranslationKey) => string): {
   }
 }
 
+// ── Crop Selector Options ───────────────────────────────────────────────────
+
+const CROPS = [
+  { value: 'Cotton', key: 'crop.cotton' },
+  { value: 'Rice', key: 'crop.rice' },
+  { value: 'Wheat', key: 'crop.wheat' },
+  { value: 'Maize', key: 'crop.maize' },
+  { value: 'Tomato', key: 'crop.tomato' },
+  { value: 'Potato', key: 'crop.potato' },
+  { value: 'Onion', key: 'crop.onion' },
+  { value: 'Chilli', key: 'crop.chilli' },
+  { value: 'Sugarcane', key: 'crop.sugarcane' },
+  { value: 'Soybean', key: 'crop.soybean' },
+  { value: 'Groundnut', key: 'crop.groundnut' },
+  { value: 'Banana', key: 'crop.banana' },
+  { value: 'Grapes', key: 'crop.grapes' },
+  { value: 'Mango', key: 'crop.mango' },
+  { value: 'Pomegranate', key: 'crop.pomegranate' },
+  { value: 'Millets', key: 'crop.millets' },
+] as const
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function DiseaseCheckPage() {
@@ -125,6 +178,7 @@ export default function DiseaseCheckPage() {
   const [diagnosisResult, setDiagnosisResult] = useState<DiseaseCheckResponse | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [voiceDescription, setVoiceDescription] = useState<string>('')
+  const [selectedCrop, setSelectedCrop] = useState<string>('')
 
   // Status message rotation during the analysis phase
   const [analysisStatusKey, setAnalysisStatusKey] = useState<TranslationKey>('disease.status.uploading')
@@ -185,7 +239,7 @@ export default function DiseaseCheckPage() {
       const response = await fetch('/api/disease-checks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_url: uploadedUrl, target_lang: language }),
+        body: JSON.stringify({ image_url: uploadedUrl, target_lang: language, crop_type: selectedCrop || undefined }),
       })
 
       const data = (await response.json()) as DiseaseCheckResponse
@@ -228,7 +282,7 @@ export default function DiseaseCheckPage() {
       const response = await fetch('/api/disease-checks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voice_description: voiceDescription, target_lang: language }),
+        body: JSON.stringify({ voice_description: voiceDescription, target_lang: language, crop_type: selectedCrop || undefined }),
       })
 
       const data = (await response.json()) as DiseaseCheckResponse
@@ -325,6 +379,33 @@ export default function DiseaseCheckPage() {
               key="ready"
               exit={{ opacity: 0 }}
             >
+              {/* Crop Selector Card */}
+              <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <label htmlFor="crop-select" className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                  {t('disease.selectCrop')}
+                </label>
+                <div className="relative">
+                  <select
+                    id="crop-select"
+                    value={selectedCrop}
+                    onChange={(e) => setSelectedCrop(e.target.value)}
+                    className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 focus:border-primary-green focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-green/20 transition-all cursor-pointer"
+                  >
+                    <option value="">-- {t('disease.selectCrop')} --</option>
+                    {CROPS.map((crop) => (
+                      <option key={crop.value} value={crop.value}>
+                        {t(crop.key as TranslationKey)}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-500">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
               <PhotoUpload
                 label={t('disease.uploadStep1')}
                 onUpload={handleCheck}
@@ -554,17 +635,103 @@ export default function DiseaseCheckPage() {
                     </div>
                   )}
 
-                  {/* Recommendation Details */}
-                  <div className="mt-6">
-                    <h3 className="text-sm font-semibold text-slate-800">{t('disease.recommendedTreatment')}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-slate-600 whitespace-pre-line">
-                      {diagnosisResult.treatment_advice}
-                    </p>
+                  {/* Structured Treatment Advisory Report */}
+                  <div className="mt-8 border-t border-slate-100 pt-6">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">
+                      {t('disease.recommendedTreatment')}
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      {/* Organic Treatment Card */}
+                      {diagnosisResult.organic_treatment && (
+                        <div className="rounded-xl border border-emerald-100 bg-emerald-50/10 p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            {OrganicIcon}
+                            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                              {t('disease.treatment.organic')}
+                            </h4>
+                          </div>
+                          <p className="text-sm text-slate-600 leading-relaxed">
+                            {diagnosisResult.organic_treatment}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Chemical Treatment Card */}
+                      {diagnosisResult.chemical_treatment && (
+                        <div className="rounded-xl border border-blue-100 bg-blue-50/10 p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            {ChemicalIcon}
+                            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                              {t('disease.treatment.chemical')}
+                            </h4>
+                          </div>
+                          <p className="text-sm text-slate-600 leading-relaxed">
+                            {diagnosisResult.chemical_treatment}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Prevention Card */}
+                      {diagnosisResult.prevention && (
+                        <div className="rounded-xl border border-indigo-100 bg-indigo-50/10 p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            {PreventionIcon}
+                            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                              {t('disease.treatment.prevention')}
+                            </h4>
+                          </div>
+                          <p className="text-sm text-slate-600 leading-relaxed">
+                            {diagnosisResult.prevention}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Monitoring Card */}
+                      {diagnosisResult.monitoring && (
+                        <div className="rounded-xl border border-amber-100 bg-amber-50/10 p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            {MonitoringIcon}
+                            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                              {t('disease.treatment.monitoring')}
+                            </h4>
+                          </div>
+                          <p className="text-sm text-slate-600 leading-relaxed">
+                            {diagnosisResult.monitoring}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
                     {diagnosisResult.treatment_advice && (
-                      <ListenButton
-                        text={diagnosisResult.treatment_advice}
-                        languageCode={toSpeechLocale(language)}
-                      />
+                      <div className="mt-6 flex flex-col gap-4 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-xs leading-relaxed text-slate-400 italic flex-1">
+                          {diagnosisResult.treatment_advice}
+                        </p>
+                        <div className="shrink-0">
+                          <ListenButton
+                            text={(() => {
+                              const parts = [
+                                diagnosisResult.treatment_advice
+                              ]
+                              if (diagnosisResult.organic_treatment) {
+                                parts.push(`${t('disease.treatment.organic')}: ${diagnosisResult.organic_treatment}`)
+                              }
+                              if (diagnosisResult.chemical_treatment) {
+                                parts.push(`${t('disease.treatment.chemical')}: ${diagnosisResult.chemical_treatment}`)
+                              }
+                              if (diagnosisResult.prevention) {
+                                parts.push(`${t('disease.treatment.prevention')}: ${diagnosisResult.prevention}`)
+                              }
+                              if (diagnosisResult.monitoring) {
+                                parts.push(`${t('disease.treatment.monitoring')}: ${diagnosisResult.monitoring}`)
+                              }
+                              return parts.join('. ')
+                            })()}
+                            languageCode={toSpeechLocale(language)}
+                          />
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>

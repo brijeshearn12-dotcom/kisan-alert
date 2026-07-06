@@ -485,6 +485,10 @@ export interface DiseaseDiagnosis {
   severity?: 'LOW' | 'MEDIUM' | 'HIGH' | null
   spread_risk?: 'LOW' | 'MEDIUM' | 'HIGH' | null
   immediate_action?: string | null
+  organic_treatment?: string | null
+  chemical_treatment?: string | null
+  prevention?: string | null
+  monitoring?: string | null
   error?: string
 }
 
@@ -496,6 +500,10 @@ const DIAGNOSIS_FALLBACK: DiseaseDiagnosis = {
   severity: null,
   spread_risk: null,
   immediate_action: null,
+  organic_treatment: null,
+  chemical_treatment: null,
+  prevention: null,
+  monitoring: null,
   error: 'ai_unavailable',
 }
 
@@ -567,9 +575,9 @@ function buildDiagnosisPrompt(cropType?: string, targetLangName: string = 'Engli
     '- multiple diseases are plausible',
     '- you cannot confidently distinguish between conditions.',
     '',
-    `You MUST respond and write all text fields (diagnosis, treatment_advice, immediate_action) entirely in the ${targetLangName} language.`,
+    `You MUST respond and write all text fields (diagnosis, treatment_advice, immediate_action, organic_treatment, chemical_treatment, prevention, monitoring) entirely in the ${targetLangName} language.`,
     'Respond with ONLY valid JSON (no markdown, no code fences, no commentary) in exactly this shape:',
-    `{"diagnosis": "<disease name or condition in ${targetLangName}>", "confidence_score": <number between 0 and 1>, "treatment_advice": "<2-3 simple sentences in ${targetLangName} using practical, locally available remedies>", "severity": "<LOW, MEDIUM, or HIGH>", "spread_risk": "<LOW, MEDIUM, or HIGH>", "immediate_action": "<one short sentence of urgent advice in ${targetLangName} under 10 words>" }`,
+    `{"diagnosis": "<disease name or condition in ${targetLangName}>", "confidence_score": <number between 0 and 1>, "treatment_advice": "<overall summary sentence in ${targetLangName}>", "severity": "<LOW, MEDIUM, or HIGH>", "spread_risk": "<LOW, MEDIUM, or HIGH>", "immediate_action": "<one short sentence of urgent action in ${targetLangName} under 10 words>", "organic_treatment": "<concise organic remedy in ${targetLangName} under 15 words>", "chemical_treatment": "<concise chemical fungicide/remedy in ${targetLangName} under 15 words>", "prevention": "<one concise preventative farming tip in ${targetLangName} under 15 words>", "monitoring": "<one concise inspection instruction in ${targetLangName} under 15 words>" }`,
   ].join('\n')
 }
 
@@ -587,6 +595,10 @@ function normalizeDiagnosisOutput(parsed: unknown): DiseaseDiagnosis | null {
   const rawSeverity = record.severity
   const rawSpreadRisk = record.spread_risk || record.spreadRisk
   const rawImmediateAction = record.immediate_action || record.immediateAction
+  const rawOrganic = record.organic_treatment || record.organicTreatment
+  const rawChemical = record.chemical_treatment || record.chemicalTreatment
+  const rawPrevention = record.prevention
+  const rawMonitoring = record.monitoring
 
   if (typeof rawDiagnosis !== 'string' || rawDiagnosis.trim() === '') return null
   if (typeof rawTreatment !== 'string' || rawTreatment.trim() === '') return null
@@ -620,6 +632,27 @@ function normalizeDiagnosisOutput(parsed: unknown): DiseaseDiagnosis | null {
     immediate_action = rawImmediateAction.trim()
   }
 
+  // Validate structured fields
+  let organic_treatment: string | null = null
+  if (typeof rawOrganic === 'string' && rawOrganic.trim() !== '') {
+    organic_treatment = rawOrganic.trim()
+  }
+
+  let chemical_treatment: string | null = null
+  if (typeof rawChemical === 'string' && rawChemical.trim() !== '') {
+    chemical_treatment = rawChemical.trim()
+  }
+
+  let prevention: string | null = null
+  if (typeof rawPrevention === 'string' && rawPrevention.trim() !== '') {
+    prevention = rawPrevention.trim()
+  }
+
+  let monitoring: string | null = null
+  if (typeof rawMonitoring === 'string' && rawMonitoring.trim() !== '') {
+    monitoring = rawMonitoring.trim()
+  }
+
   return {
     diagnosis: rawDiagnosis.trim(),
     confidence_score,
@@ -627,6 +660,10 @@ function normalizeDiagnosisOutput(parsed: unknown): DiseaseDiagnosis | null {
     severity,
     spread_risk,
     immediate_action,
+    organic_treatment,
+    chemical_treatment,
+    prevention,
+    monitoring,
   }
 }
 
@@ -733,8 +770,15 @@ const TEXT_DIAGNOSIS_SYSTEM_INSTRUCTION =
 /**
  * Build the prompt for a text-only diagnosis from a farmer's description.
  */
-function buildTextDiagnosisPrompt(description: string, targetLangName: string = 'English'): string {
+function buildTextDiagnosisPrompt(description: string, targetLangName: string = 'English', cropType?: string): string {
+  const cropLine =
+    cropType && cropType.trim() !== ''
+      ? `The crop under diagnosis is: ${cropType.trim()}.`
+      : 'The crop type is not specified; infer it from the description if possible.'
+
   return [
+    cropLine,
+    '',
     'A farmer described their crop issue (transcribed from speech — minor errors possible):',
     '',
     `"${description}"`,
@@ -746,9 +790,9 @@ function buildTextDiagnosisPrompt(description: string, targetLangName: string = 
     '- multiple diseases are plausible',
     '- key details (crop type, duration, spread) are missing.',
     '',
-    `You MUST respond and write all text fields (diagnosis, treatment_advice, immediate_action) entirely in the ${targetLangName} language.`,
+    `You MUST respond and write all text fields (diagnosis, treatment_advice, immediate_action, organic_treatment, chemical_treatment, prevention, monitoring) entirely in the ${targetLangName} language.`,
     'Respond with ONLY valid JSON (no markdown, no code fences, no commentary) in exactly this shape:',
-    `{"diagnosis": "<disease name or condition in ${targetLangName}>", "confidence_score": <number between 0 and 1>, "treatment_advice": "<2-3 sentences in ${targetLangName}, use locally available remedies like neem, urea, fungicide etc.>", "severity": "<LOW, MEDIUM, or HIGH>", "spread_risk": "<LOW, MEDIUM, or HIGH>", "immediate_action": "<one short sentence of urgent advice in ${targetLangName} under 10 words>" }`,
+    `{"diagnosis": "<disease name or condition in ${targetLangName}>", "confidence_score": <number between 0 and 1>, "treatment_advice": "<overall summary sentence in ${targetLangName}>", "severity": "<LOW, MEDIUM, or HIGH>", "spread_risk": "<LOW, MEDIUM, or HIGH>", "immediate_action": "<one short sentence of urgent action in ${targetLangName} under 10 words>", "organic_treatment": "<concise organic remedy in ${targetLangName} under 15 words>", "chemical_treatment": "<concise chemical fungicide/remedy in ${targetLangName} under 15 words>", "prevention": "<one concise preventative farming tip in ${targetLangName} under 15 words>", "monitoring": "<one concise inspection instruction in ${targetLangName} under 15 words>" }`,
   ].join('\n')
 }
 
@@ -761,6 +805,7 @@ function buildTextDiagnosisPrompt(description: string, targetLangName: string = 
 export async function getDiseaseDiagnosisFromText(
   description: string,
   targetLang: string = 'en',
+  cropType?: string,
 ): Promise<DiseaseDiagnosis> {
   if (!description.trim()) {
     return {
@@ -787,7 +832,7 @@ export async function getDiseaseDiagnosisFromText(
       },
     })
 
-    const prompt = buildTextDiagnosisPrompt(description, targetLangName)
+    const prompt = buildTextDiagnosisPrompt(description, targetLangName, cropType)
 
     const result = await Promise.race([
       model.generateContent(prompt),

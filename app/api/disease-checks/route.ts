@@ -102,7 +102,8 @@ export async function POST(request: Request) {
       voice_description.trim() !== ''
     ) {
       const cleanedText = normalizeTranscript(voice_description.trim())
-      const textResult = await getDiseaseDiagnosisFromText(cleanedText, targetLang)
+      const voiceCropType = typeof crop_type === 'string' && crop_type.trim() !== '' ? crop_type.trim() : undefined
+      const textResult = await getDiseaseDiagnosisFromText(cleanedText, targetLang, voiceCropType)
 
       // Gemini fallback → return cleanly, no DB write, no escalation
       if (textResult.error || textResult.diagnosis === null) {
@@ -113,6 +114,10 @@ export async function POST(request: Request) {
           severity: null,
           spread_risk: null,
           immediate_action: null,
+          organic_treatment: null,
+          chemical_treatment: null,
+          prevention: null,
+          monitoring: null,
           escalated: false,
           case_id: null,
           disease_check_id: null,
@@ -123,20 +128,48 @@ export async function POST(request: Request) {
       let diagnosisToSave = textResult.diagnosis
       let treatmentToSave = textResult.treatment_advice
       let immediateActionToSave = textResult.immediate_action
+      let organicTreatmentToSave = textResult.organic_treatment
+      let chemicalTreatmentToSave = textResult.chemical_treatment
+      let preventionToSave = textResult.prevention
+      let monitoringToSave = textResult.monitoring
 
       if (targetLang !== 'en' && textResult.diagnosis && textResult.treatment_advice) {
         const transPromises = [
           translateText(textResult.diagnosis, targetLang),
           translateText(textResult.treatment_advice, targetLang),
         ]
+        const keyMap = ['diagnosis', 'treatment_advice']
         if (textResult.immediate_action) {
           transPromises.push(translateText(textResult.immediate_action, targetLang))
+          keyMap.push('immediate_action')
         }
-        const [transDiagnosis, transTreatment, transImmediate] = await Promise.all(transPromises)
-        diagnosisToSave = transDiagnosis
-        treatmentToSave = transTreatment
-        if (textResult.immediate_action) {
-          immediateActionToSave = transImmediate
+        if (textResult.organic_treatment) {
+          transPromises.push(translateText(textResult.organic_treatment, targetLang))
+          keyMap.push('organic_treatment')
+        }
+        if (textResult.chemical_treatment) {
+          transPromises.push(translateText(textResult.chemical_treatment, targetLang))
+          keyMap.push('chemical_treatment')
+        }
+        if (textResult.prevention) {
+          transPromises.push(translateText(textResult.prevention, targetLang))
+          keyMap.push('prevention')
+        }
+        if (textResult.monitoring) {
+          transPromises.push(translateText(textResult.monitoring, targetLang))
+          keyMap.push('monitoring')
+        }
+        const transResults = await Promise.all(transPromises)
+        for (let i = 0; i < keyMap.length; i++) {
+          const key = keyMap[i]
+          const val = transResults[i]
+          if (key === 'diagnosis') diagnosisToSave = val
+          else if (key === 'treatment_advice') treatmentToSave = val
+          else if (key === 'immediate_action') immediateActionToSave = val
+          else if (key === 'organic_treatment') organicTreatmentToSave = val
+          else if (key === 'chemical_treatment') chemicalTreatmentToSave = val
+          else if (key === 'prevention') preventionToSave = val
+          else if (key === 'monitoring') monitoringToSave = val
         }
       }
 
@@ -146,6 +179,10 @@ export async function POST(request: Request) {
         severity: textResult.severity,
         spread_risk: textResult.spread_risk,
         immediate_action: immediateActionToSave,
+        organic_treatment: organicTreatmentToSave,
+        chemical_treatment: chemicalTreatmentToSave,
+        prevention: preventionToSave,
+        monitoring: monitoringToSave,
       })
 
       const { data: check, error: checkError } = await supabase
@@ -191,6 +228,10 @@ export async function POST(request: Request) {
         severity: textResult.severity,
         spread_risk: textResult.spread_risk,
         immediate_action: immediateActionToSave,
+        organic_treatment: organicTreatmentToSave,
+        chemical_treatment: chemicalTreatmentToSave,
+        prevention: preventionToSave,
+        monitoring: monitoringToSave,
         escalated: caseId !== null,
         case_id: caseId,
         disease_check_id: check.id,
@@ -227,6 +268,10 @@ export async function POST(request: Request) {
         severity: null,
         spread_risk: null,
         immediate_action: null,
+        organic_treatment: null,
+        chemical_treatment: null,
+        prevention: null,
+        monitoring: null,
         escalated: false,
         case_id: null,
         disease_check_id: null,
@@ -237,20 +282,48 @@ export async function POST(request: Request) {
     let diagnosisToSave = result.diagnosis
     let treatmentToSave = result.treatment_advice
     let immediateActionToSave = result.immediate_action
+    let organicTreatmentToSave = result.organic_treatment
+    let chemicalTreatmentToSave = result.chemical_treatment
+    let preventionToSave = result.prevention
+    let monitoringToSave = result.monitoring
 
     if (targetLang !== 'en' && result.diagnosis && result.treatment_advice) {
       const transPromises = [
         translateText(result.diagnosis, targetLang),
         translateText(result.treatment_advice, targetLang),
       ]
+      const keyMap = ['diagnosis', 'treatment_advice']
       if (result.immediate_action) {
         transPromises.push(translateText(result.immediate_action, targetLang))
+        keyMap.push('immediate_action')
       }
-      const [transDiagnosis, transTreatment, transImmediate] = await Promise.all(transPromises)
-      diagnosisToSave = transDiagnosis
-      treatmentToSave = transTreatment
-      if (result.immediate_action) {
-        immediateActionToSave = transImmediate
+      if (result.organic_treatment) {
+        transPromises.push(translateText(result.organic_treatment, targetLang))
+        keyMap.push('organic_treatment')
+      }
+      if (result.chemical_treatment) {
+        transPromises.push(translateText(result.chemical_treatment, targetLang))
+        keyMap.push('chemical_treatment')
+      }
+      if (result.prevention) {
+        transPromises.push(translateText(result.prevention, targetLang))
+        keyMap.push('prevention')
+      }
+      if (result.monitoring) {
+        transPromises.push(translateText(result.monitoring, targetLang))
+        keyMap.push('monitoring')
+      }
+      const transResults = await Promise.all(transPromises)
+      for (let i = 0; i < keyMap.length; i++) {
+        const key = keyMap[i]
+        const val = transResults[i]
+        if (key === 'diagnosis') diagnosisToSave = val
+        else if (key === 'treatment_advice') treatmentToSave = val
+        else if (key === 'immediate_action') immediateActionToSave = val
+        else if (key === 'organic_treatment') organicTreatmentToSave = val
+        else if (key === 'chemical_treatment') chemicalTreatmentToSave = val
+        else if (key === 'prevention') preventionToSave = val
+        else if (key === 'monitoring') monitoringToSave = val
       }
     }
 
@@ -261,6 +334,10 @@ export async function POST(request: Request) {
       severity: result.severity,
       spread_risk: result.spread_risk,
       immediate_action: immediateActionToSave,
+      organic_treatment: organicTreatmentToSave,
+      chemical_treatment: chemicalTreatmentToSave,
+      prevention: preventionToSave,
+      monitoring: monitoringToSave,
     })
 
     const { data: check, error: checkError } = await supabase
@@ -307,6 +384,10 @@ export async function POST(request: Request) {
       severity: result.severity,
       spread_risk: result.spread_risk,
       immediate_action: immediateActionToSave,
+      organic_treatment: organicTreatmentToSave,
+      chemical_treatment: chemicalTreatmentToSave,
+      prevention: preventionToSave,
+      monitoring: monitoringToSave,
       escalated: caseId !== null,
       case_id: caseId,
       disease_check_id: check.id,

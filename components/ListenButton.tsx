@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface ListenButtonProps {
   text: string
@@ -8,6 +9,7 @@ interface ListenButtonProps {
 }
 
 export function ListenButton({ text, languageCode }: ListenButtonProps) {
+  const { t } = useLanguage()
   const [playing, setPlaying] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -67,7 +69,7 @@ export function ListenButton({ text, languageCode }: ListenButtonProps) {
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-rose-500">
             <rect x="4" y="4" width="16" height="16" rx="2" />
           </svg>
-          <span>Stop</span>
+          <span>{t('voice.stop')}</span>
         </>
       ) : (
         <>
@@ -76,7 +78,7 @@ export function ListenButton({ text, languageCode }: ListenButtonProps) {
             <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
             <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
           </svg>
-          <span>Listen</span>
+          <span>{t('buttons.listen')}</span>
         </>
       )}
     </button>

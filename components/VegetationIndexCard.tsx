@@ -561,10 +561,18 @@ export default function VegetationIndexCard({
 function ConfidencePill({ confidence }: { confidence: Confidence }) {
   const { t } = useLanguage()
   const style = CONFIDENCE_STYLE[confidence]
-  const translatedLabel = 
-    confidence === 'high' ? t('disease.confidence.high').replace(' confidence', '').replace(' विश्वास', '').replace(' ಮಟ್ಟ', '').replace(' நம்பிக்கை', '').replace(' నమ్మకం', '').replace(' বিশ্বাস', '') :
-    confidence === 'medium' ? t('disease.confidence.moderate').replace(' confidence', '').replace(' विश्वास', '').replace(' ಮಟ್ಟ', '').replace(' நம்பிக்கை', '').replace(' నమ్మకం', '').replace(' বিশ্বাস', '') :
-    confidence === 'low' ? t('disease.confidence.low').replace(' confidence', '').replace(' विश्वास', '').replace(' ಮಟ್ಟ', '').replace(' நம்பிக்கை', '').replace(' నమ్మకం', '').replace(' বিশ্বাস', '') : style.label
+  // The pill shows just the level word ("High" / "उच्च" / …) next to a separate
+  // "confidence" label. In every supported language the level adjective is the
+  // FIRST word of the full confidence phrase (e.g. "उच्च विश्वास",
+  // "High confidence", "উচ্চ আস্থার মাত্রা"), so taking the first token gives a
+  // clean, correct label without brittle per-language suffix stripping.
+  const confidenceKey =
+    confidence === 'high'
+      ? 'disease.confidence.high'
+      : confidence === 'medium'
+        ? 'disease.confidence.moderate'
+        : 'disease.confidence.low'
+  const translatedLabel = t(confidenceKey).split(' ')[0] || style.label
 
   return (
     <span

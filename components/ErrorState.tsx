@@ -1,6 +1,7 @@
 'use client'
 
 import { type ReactNode } from 'react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface ErrorStateProps {
   icon?: ReactNode
@@ -16,9 +17,11 @@ export function ErrorState({
   title,
   description,
   onRetry,
-  retryText = 'Try again',
+  retryText,
   secondaryAction,
 }: ErrorStateProps) {
+  const { t } = useLanguage()
+  const retryLabel = retryText ?? t('buttons.tryAgain')
   return (
     <div
       role="alert"
@@ -70,7 +73,7 @@ export function ErrorState({
                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                 <path d="M3 3v5h5" />
               </svg>
-              <span>{retryText}</span>
+              <span>{retryLabel}</span>
             </button>
           )}
           {secondaryAction}

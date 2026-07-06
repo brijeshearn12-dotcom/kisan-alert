@@ -153,7 +153,7 @@ export default function ExpertDashboardPage() {
         setCases((casesData as unknown as CaseRecord[]) || [])
       } catch (err) {
         if (active) {
-          setErrorMsg(err instanceof Error ? err.message : 'Failed to fetch cases')
+          setErrorMsg(err instanceof Error ? err.message : t('expert.dbError'))
         }
       } finally {
         if (active) {
@@ -166,6 +166,8 @@ export default function ExpertDashboardPage() {
     return () => {
       active = false
     }
+    // `t` is intentionally omitted: cases must not refetch on language change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase])
 
   if (loading) {

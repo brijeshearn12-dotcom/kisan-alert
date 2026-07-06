@@ -218,7 +218,7 @@ export function LanguageSelector({ placement = 'up', className = '' }: LanguageS
             variants={panelVariants}
             transition={{ duration: 0.16, ease: 'easeOut' }}
             className={[
-              'absolute right-0 z-50 max-h-72 w-56 overflow-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl',
+              'absolute right-0 z-50 max-h-72 w-56 max-w-[calc(100vw-1.5rem)] overflow-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl',
               placement === 'up' ? 'bottom-full mb-2' : 'top-full mt-2',
             ].join(' ')}
           >

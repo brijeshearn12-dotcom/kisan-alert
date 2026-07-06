@@ -163,7 +163,7 @@ export function NotificationPanel() {
 
       {/* Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-2.5 w-80 origin-top-right rounded-2xl border border-slate-100 bg-white shadow-xl ring-1 ring-black/5 focus:outline-none z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute right-0 mt-2.5 w-80 max-w-[calc(100vw-1.5rem)] origin-top-right rounded-2xl border border-slate-100 bg-white shadow-xl ring-1 ring-black/5 focus:outline-none z-50 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="flex items-center justify-between border-b border-slate-50 px-4 py-3">
             <h3 className="text-sm font-semibold text-slate-800">{t('notification.title')}</h3>
             {unreadCount > 0 && (

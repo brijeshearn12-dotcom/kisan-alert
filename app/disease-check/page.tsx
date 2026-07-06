@@ -188,7 +188,7 @@ export default function DiseaseCheckPage() {
       const data = (await response.json()) as DiseaseCheckResponse
 
       if (!response.ok) {
-        throw new Error(data.error ?? 'Failed to analyze crop image.')
+        throw new Error(data.error ?? t('disease.failed'))
       }
 
       setDiagnosisResult(data)
@@ -200,7 +200,7 @@ export default function DiseaseCheckPage() {
         setScreenState('success')
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'A network error occurred. Please try again.'
+      const message = err instanceof Error ? err.message : t('errors.network')
       setErrorMsg(message)
       setScreenState('error')
     }
@@ -231,7 +231,7 @@ export default function DiseaseCheckPage() {
       const data = (await response.json()) as DiseaseCheckResponse
 
       if (!response.ok) {
-        throw new Error(data.error ?? 'Failed to analyze crop description.')
+        throw new Error(data.error ?? t('disease.failed'))
       }
 
       setDiagnosisResult(data)
@@ -242,7 +242,7 @@ export default function DiseaseCheckPage() {
         setScreenState('success')
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'A network error occurred. Please try again.'
+      const message = err instanceof Error ? err.message : t('errors.network')
       setErrorMsg(message)
       setScreenState('error')
     }
@@ -595,7 +595,6 @@ export default function DiseaseCheckPage() {
                 title={t('disease.failed')}
                 description={errorMsg}
                 onRetry={handleReset}
-                retryText="Try Again"
                 secondaryAction={
                   <Link
                     href="/dashboard"

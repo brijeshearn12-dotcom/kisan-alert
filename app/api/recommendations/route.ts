@@ -332,13 +332,27 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
     }
 
 
-    // Trigger Firebase notifications
+    // Trigger Firebase notifications. Notification copy is user-facing, so it
+    // must match the selected language — translate the English templates before
+    // storing them. translateText() never throws (returns the original on
+    // failure), so a translation outage degrades to English rather than erroring.
+    let recMessage = `🌾 Your crop recommendation is ready: ${recommendation.crop_name}`
+    let drySpellMessage = '⚠️ Dry spell detected. Irrigation recommended for your crop.'
+    if (targetLang !== 'en') {
+      const [translatedRec, translatedDry] = await Promise.all([
+        translateText(recMessage, targetLang),
+        translateText(drySpellMessage, targetLang),
+      ])
+      recMessage = translatedRec
+      drySpellMessage = translatedDry
+    }
+
     const notificationPromises = []
 
     // Event 2: New Recommendation Generated
     notificationPromises.push(
       sendFirebaseNotification(userId, {
-        message: `🌾 Your crop recommendation is ready: ${recommendation.crop_name}`,
+        message: recMessage,
         timestamp: Date.now(),
         read: false,
       })
@@ -348,7 +362,7 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
     if (weatherSummary.isDrySpell) {
       notificationPromises.push(
         sendFirebaseNotification(userId, {
-          message: '⚠️ Dry spell detected. Irrigation recommended for your crop.',
+          message: drySpellMessage,
           timestamp: Date.now(),
           read: false,
         })

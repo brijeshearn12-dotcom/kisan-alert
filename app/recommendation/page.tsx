@@ -355,12 +355,12 @@ export default function RecommendationPage() {
       const data: Recommendation & { error?: string } = await res.json()
 
       if (!res.ok) {
-        setFormError(data?.error ?? 'We could not generate a recommendation. Please try again.')
+        setFormError(data?.error ?? t('errors.generic'))
         return
       }
       setResult(data)
     } catch {
-      setFormError('Network error. Check your connection and try again.')
+      setFormError(t('errors.network'))
     } finally {
       setSubmitting(false)
     }

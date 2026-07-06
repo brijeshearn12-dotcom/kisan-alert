@@ -206,7 +206,7 @@ export function TopNav({
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-green text-white">
             <Icon size={16}>{LeafPath}</Icon>
           </span>
-          <span className="text-sm font-semibold tracking-tight text-slate-900">Kisan Alert</span>
+          <span className="text-sm font-semibold tracking-tight text-slate-900">{t('common.appName')}</span>
         </Link>
 
         {showUser && (
@@ -579,7 +579,7 @@ export function SiteFooter() {
           <span className="text-primary-green">
             <Icon size={14}>{LeafPath}</Icon>
           </span>
-          Kisan Alert
+          {t('common.appName')}
         </span>
         <span>{t('dashboard.footerTagline')}</span>
       </div>

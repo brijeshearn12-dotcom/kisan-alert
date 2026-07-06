@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { getLanguageMeta } from '@/lib/i18n/translations'
+import { getLanguageMeta, formatNumber } from '@/lib/i18n/translations'
 
 interface FarmerProfile {
   id: string
@@ -181,7 +181,7 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
                 </div>
                 <div>•</div>
                 <div>
-                  {t('recommendation.result.confidence')}: <span className="font-semibold text-slate-700">{check?.confidence_score !== undefined ? `${(check.confidence_score * 100).toFixed(0)}%` : 'N/A'}</span>
+                  {t('recommendation.result.confidence')}: <span className="font-semibold text-slate-700">{check?.confidence_score !== undefined ? `${formatNumber(Math.round(check.confidence_score * 100), language)}%` : 'N/A'}</span>
                 </div>
                 <div>•</div>
                 <div>

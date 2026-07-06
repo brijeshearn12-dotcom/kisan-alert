@@ -17,7 +17,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { NotificationPanel } from '@/components/NotificationPanel'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { type TranslationKey, getCropTranslationKey, getLanguageMeta, type LanguageCode } from '@/lib/i18n/translations'
+import { type TranslationKey, getCropTranslationKey, getLanguageMeta, type LanguageCode, formatNumber } from '@/lib/i18n/translations'
 
 // ── Types (mirror GET /api/dashboard) ───────────────────────────────────────
 
@@ -298,7 +298,7 @@ export function WeatherCard({
             <div>
               <div className="flex items-start gap-1">
                 <span className="text-4xl font-semibold tracking-tight text-slate-900 tabular-nums">
-                  {Math.round(weather.temperature)}
+                  {formatNumber(Math.round(weather.temperature), language)}
                 </span>
                 <span className="mt-1 text-lg font-medium text-slate-400">°C</span>
               </div>
@@ -306,8 +306,8 @@ export function WeatherCard({
             </div>
 
             <div className="flex gap-2">
-              <Stat icon={DropPath} label={t('dashboard.weather.humidity')} value={`${Math.round(weather.humidity)}%`} />
-              <Stat icon={ThermPath} label={t('dashboard.weather.rainToday')} value={`${weather.rainfall} mm`} />
+              <Stat icon={DropPath} label={t('dashboard.weather.humidity')} value={`${formatNumber(Math.round(weather.humidity), language)}%`} />
+              <Stat icon={ThermPath} label={t('dashboard.weather.rainToday')} value={`${formatNumber(weather.rainfall, language)} mm`} />
             </div>
           </div>
 
@@ -326,17 +326,17 @@ export function WeatherCard({
                       {dayLabel(day.date, index, t, language)}
                     </span>
                     <span className="text-[13px] font-semibold text-slate-900 tabular-nums">
-                      {Math.round(day.temperature_max)}°
+                      {formatNumber(Math.round(day.temperature_max), language)}°
                     </span>
                     <span className="text-[11px] text-slate-400 tabular-nums">
-                      {Math.round(day.temperature_min)}°
+                      {formatNumber(Math.round(day.temperature_min), language)}°
                     </span>
                     <span
                       className={`text-[10px] tabular-nums ${
                         day.precipitation >= 1 ? 'text-primary-green' : 'text-slate-300'
                       }`}
                     >
-                      {day.precipitation >= 1 ? `${Math.round(day.precipitation)}mm` : '—'}
+                      {day.precipitation >= 1 ? `${formatNumber(Math.round(day.precipitation), language)}mm` : '—'}
                     </span>
                   </li>
                 ))}
@@ -459,7 +459,7 @@ export function RecommendationCard({ recommendation }: { recommendation: Recomme
             className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${confidence.bg} ${confidence.text} ${confidence.ring}`}
           >
             <span className={`h-1.5 w-1.5 rounded-full ${confidence.dot}`} />
-            {percent}%
+            {formatNumber(percent, language)}%
           </span>
         </div>
 

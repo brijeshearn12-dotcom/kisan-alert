@@ -28,7 +28,7 @@ import { ListenButton } from '@/components/ListenButton'
 import SoilMoistureSlider from '@/components/SoilMoistureSlider'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toSpeechLocale } from '@/lib/i18n/speech'
-import { type TranslationKey, getLanguageMeta } from '@/lib/i18n/translations'
+import { type TranslationKey, getLanguageMeta, formatNumber } from '@/lib/i18n/translations'
 
 interface VegetationIndexCardProps {
   latitude: number | null
@@ -408,11 +408,11 @@ export default function VegetationIndexCard({
                 <>
                   <span className="inline-flex items-center gap-1.5">
                     <span aria-hidden="true">🌡</span>
-                    <span className="font-semibold text-slate-700">{weather.temperature}°C</span>
+                    <span className="font-semibold text-slate-700">{formatNumber(Math.round(weather.temperature), language)}°C</span>
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <span aria-hidden="true">💦</span>
-                    <span className="font-semibold text-slate-700">{weather.humidity}%</span> {t('veg.humidityLabel')}
+                    <span className="font-semibold text-slate-700">{formatNumber(Math.round(weather.humidity), language)}%</span> {t('veg.humidityLabel')}
                   </span>
                 </>
               )}
@@ -450,7 +450,7 @@ export default function VegetationIndexCard({
         </div>
 
         {/* Score track */}
-        <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuenow={index.score} aria-valuemin={0} aria-valuemax={100} aria-label={`${t('veg.estimatedIndex')}: ${index.score} / 100`}>
+        <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuenow={index.score} aria-valuemin={0} aria-valuemax={100} aria-label={`${t('veg.estimatedIndex')}: ${formatNumber(index.score, language)} / ${formatNumber(100, language)}`}>
           <div
             className="h-full rounded-full transition-all duration-500 ease-out"
             style={{ width: `${index.score}%`, backgroundColor: groundColor(index.status) }}
@@ -478,12 +478,12 @@ export default function VegetationIndexCard({
             <dl className="space-y-2 border-t border-slate-100 px-4 py-3 text-sm">
               <BreakdownRow
                 label={t('veg.soilMoistureContribution')}
-                detail={`${soilMoisture}%`}
+                detail={`${formatNumber(soilMoisture, language)}%`}
                 points={index.breakdown.soilContribution}
               />
               <BreakdownRow
                 label={t('veg.rainfallContribution')}
-                detail={hasRainfall ? `${rainfallMm7d} mm` : 'unavailable'}
+                detail={hasRainfall ? `${formatNumber(rainfallMm7d, language)} mm` : t('recommendation.advisory.unavailable')}
                 points={index.breakdown.rainfallContribution}
               />
               <BreakdownRow
@@ -493,7 +493,7 @@ export default function VegetationIndexCard({
               />
               <div className="flex items-center justify-between border-t border-slate-100 pt-2 font-semibold text-slate-800">
                 <dt>{t('veg.totalLabel')}</dt>
-                <dd className="tabular-nums">{index.score} pts</dd>
+                <dd className="tabular-nums">{formatNumber(index.score, language)} pts</dd>
               </div>
             </dl>
           )}
@@ -633,7 +633,7 @@ function TomorrowOutlookRow({
   trend: 'improving' | 'declining' | 'stable'
   explanation: string
 }) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const arrow = trend === 'improving' ? '▲' : trend === 'declining' ? '▼' : '▪'
   const trendClass =
     trend === 'improving'
@@ -648,7 +648,7 @@ function TomorrowOutlookRow({
     <div className="mt-4 flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
       <div className="shrink-0 text-center">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{t('veg.tomorrow')}</p>
-        <p className="mt-0.5 text-xl font-semibold tabular-nums text-slate-800">{score}</p>
+        <p className="mt-0.5 text-xl font-semibold tabular-nums text-slate-800">{formatNumber(score, language)}</p>
       </div>
       <div className="min-w-0 border-l border-slate-200 pl-3">
         <p className={`flex items-center gap-1 text-xs font-semibold ${trendClass}`}>

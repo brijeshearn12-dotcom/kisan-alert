@@ -17,7 +17,7 @@ import type { CurrentWeather } from '@/lib/weather'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toSpeechLocale } from '@/lib/i18n/speech'
 import type { LanguageCode, TranslationKey } from '@/lib/i18n/translations'
-import { getCropTranslationKey } from '@/lib/i18n/translations'
+import { getCropTranslationKey, formatNumber } from '@/lib/i18n/translations'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -744,7 +744,7 @@ const ResultCard = forwardRef<
                 className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${confidence.bg} ${confidence.text} ${confidence.ring}`}
               >
                 <span className={`h-1.5 w-1.5 rounded-full ${confidence.dot}`} />
-                {percent}%
+                {formatNumber(percent, language)}%
               </span>
             </div>
 
@@ -758,7 +758,7 @@ const ResultCard = forwardRef<
                    confidence.label === 'Low confidence' ? t('disease.confidence.low') : confidence.label}
                 </span>
               </div>
-              <div className="h-1.5 w-full rounded-full bg-slate-100" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label={`${t('recommendation.result.confidence')}: ${percent}%`}>
+              <div className="h-1.5 w-full rounded-full bg-slate-100" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label={`${t('recommendation.result.confidence')}: ${formatNumber(percent, language)}%`}>
                 <div
                   className={`h-full rounded-full transition-all duration-700 ${confidence.bar}`}
                   style={{ width: `${percent}%` }}

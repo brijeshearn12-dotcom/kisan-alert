@@ -16,7 +16,7 @@
 
 import React from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { type TranslationKey, getCropTranslationKey } from '@/lib/i18n/translations'
+import { type TranslationKey, getCropTranslationKey, formatNumber } from '@/lib/i18n/translations'
 
 interface Weather {
   temperature: number
@@ -79,7 +79,7 @@ export default function DistrictInfoCard({
   recommendedCrop,
   recommendationConfidence,
 }: DistrictInfoCardProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   
   // Resolve vegetation badge style based on index status
   const getVegetationBadgeClass = (status: string | null) => {
@@ -145,7 +145,7 @@ export default function DistrictInfoCard({
             <div className="mt-1.5 h-4 w-10 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
           ) : (
             <span className="mt-1 text-sm font-semibold text-slate-900 dark:text-white tabular-nums">
-              {weather ? `${Math.round(weather.temperature)}°C` : '—'}
+              {weather ? `${formatNumber(Math.round(weather.temperature), language)}°C` : '—'}
             </span>
           )}
         </div>
@@ -158,7 +158,7 @@ export default function DistrictInfoCard({
             <div className="mt-1.5 h-4 w-10 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
           ) : (
             <span className="mt-1 text-sm font-semibold text-slate-900 dark:text-white tabular-nums">
-              {weather ? `${Math.round(weather.humidity)}%` : '—'}
+              {weather ? `${formatNumber(Math.round(weather.humidity), language)}%` : '—'}
             </span>
           )}
         </div>
@@ -171,7 +171,7 @@ export default function DistrictInfoCard({
             <div className="mt-1.5 h-4 w-10 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
           ) : (
             <span className="mt-1 text-sm font-semibold text-slate-900 dark:text-white tabular-nums">
-              {weather ? `${weather.rainfall} mm` : '—'}
+              {weather ? `${formatNumber(weather.rainfall, language)} mm` : '—'}
             </span>
           )}
         </div>
@@ -194,7 +194,7 @@ export default function DistrictInfoCard({
                 {getTranslatedVegStatus(vegetationStatus)}
               </span>
               <span className="font-bold text-slate-900 dark:text-white tabular-nums">
-                {vegetationScore}/100
+                {formatNumber(vegetationScore, language)}/{formatNumber(100, language)}
               </span>
             </div>
           ) : (

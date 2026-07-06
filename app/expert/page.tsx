@@ -188,7 +188,7 @@ export default function ExpertDashboardPage() {
     return (
       <NoticeView
         title={t('disease.authRequired')}
-        message="You must be signed in to access the Rythu Seva Kendra portal."
+        message={t('expert.authRequiredDetail')}
       />
     )
   }
@@ -196,8 +196,8 @@ export default function ExpertDashboardPage() {
   if (authState === 'forbidden') {
     return (
       <NoticeView
-        title="Access Denied"
-        message="This dashboard is restricted to Rythu Seva Kendra officers and extension officers."
+        title={t('expert.accessDenied')}
+        message={t('expert.forbiddenDetail')}
       />
     )
   }

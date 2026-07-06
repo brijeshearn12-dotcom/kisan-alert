@@ -1,6 +1,7 @@
 'use client'
 
 import { useLanguage } from '@/contexts/LanguageContext'
+import { formatNumber } from '@/lib/i18n/translations'
 
 interface SoilMoistureSliderProps {
   value: number
@@ -11,7 +12,7 @@ export default function SoilMoistureSlider({
   value,
   onChange,
 }: SoilMoistureSliderProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
 
   // Interpretation styling
   let statusText = t('soil.moisture.status.adequate')
@@ -34,7 +35,7 @@ export default function SoilMoistureSlider({
         <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
           {t('soil.moisture.sensor')}
         </span>
-        <span className="text-sm font-bold text-slate-800">{value}%</span>
+        <span className="text-sm font-bold text-slate-800">{formatNumber(value, language)}%</span>
       </div>
 
       <div className="mb-4">

@@ -17,6 +17,15 @@ import { randomUUID } from 'node:crypto'
 import { createServerSupabaseClient } from '@/lib/supabaseServer'
 import { getDiseaseDiagnosis, getDiseaseDiagnosisFromText } from '@/lib/gemini'
 import { normalizeTranscript } from '@/utils/normalizeTranscript'
+import { translateText } from '@/lib/googleCloud'
+
+type TargetLang = 'en' | 'hi' | 'te' | 'mr' | 'gu' | 'kn' | 'ta' | 'bn'
+const TRANSLATABLE_LANGS = new Set<TargetLang>(['en', 'hi', 'te', 'mr', 'gu', 'kn', 'ta', 'bn'])
+function parseTargetLang(raw: unknown): TargetLang {
+  return typeof raw === 'string' && TRANSLATABLE_LANGS.has(raw as TargetLang)
+    ? (raw as TargetLang)
+    : 'en'
+}
 
 /** A case is opened for expert review when confidence falls below this value. */
 const LOW_CONFIDENCE_THRESHOLD = 0.6
@@ -77,11 +86,14 @@ export async function POST(request: Request) {
       return errorResponse('Request body must be valid JSON.', 400)
     }
 
-    const { image_url, crop_type, voice_description } = (body ?? {}) as {
+    const { image_url, crop_type, voice_description, target_lang } = (body ?? {}) as {
       image_url?: unknown
       crop_type?: unknown
       voice_description?: unknown
+      target_lang?: unknown
     }
+
+    const targetLang = parseTargetLang(target_lang)
 
     // ── 2b. Voice/text description path (no image required) ─────────────
     if (
@@ -90,7 +102,7 @@ export async function POST(request: Request) {
       voice_description.trim() !== ''
     ) {
       const cleanedText = normalizeTranscript(voice_description.trim())
-      const textResult = await getDiseaseDiagnosisFromText(cleanedText)
+      const textResult = await getDiseaseDiagnosisFromText(cleanedText, targetLang)
 
       // Gemini fallback → return cleanly, no DB write, no escalation
       if (textResult.error || textResult.diagnosis === null) {
@@ -105,15 +117,27 @@ export async function POST(request: Request) {
         })
       }
 
+      let diagnosisToSave = textResult.diagnosis
+      let treatmentToSave = textResult.treatment_advice
+
+      if (targetLang !== 'en' && textResult.diagnosis && textResult.treatment_advice) {
+        const [transDiagnosis, transTreatment] = await Promise.all([
+          translateText(textResult.diagnosis, targetLang),
+          translateText(textResult.treatment_advice, targetLang),
+        ])
+        diagnosisToSave = transDiagnosis
+        treatmentToSave = transTreatment
+      }
+
       // Persist the text-based diagnosis (image_url is null for voice path)
       const { data: check, error: checkError } = await supabase
         .from('disease_checks')
         .insert({
           user_id: user.id,
           image_url: null,
-          diagnosis: textResult.diagnosis,
+          diagnosis: diagnosisToSave,
           confidence_score: textResult.confidence_score,
-          treatment_advice: textResult.treatment_advice,
+          treatment_advice: treatmentToSave,
         })
         .select('id')
         .single<{ id: string }>()
@@ -143,9 +167,9 @@ export async function POST(request: Request) {
       }
 
       return NextResponse.json({
-        diagnosis: textResult.diagnosis,
+        diagnosis: diagnosisToSave,
         confidence_score: textResult.confidence_score,
-        treatment_advice: textResult.treatment_advice,
+        treatment_advice: treatmentToSave,
         escalated: caseId !== null,
         case_id: caseId,
         disease_check_id: check.id,
@@ -171,7 +195,7 @@ export async function POST(request: Request) {
         : undefined
 
     // ── 3. Diagnose (never throws; may return the AI-unavailable fallback) ─
-    const result = await getDiseaseDiagnosis(imageUrl, cropType)
+    const result = await getDiseaseDiagnosis(imageUrl, cropType, targetLang)
 
     // Gemini fallback → return it cleanly, no DB write, no escalation, no 500.
     if (result.error || result.diagnosis === null) {
@@ -186,6 +210,18 @@ export async function POST(request: Request) {
       })
     }
 
+    let diagnosisToSave = result.diagnosis
+    let treatmentToSave = result.treatment_advice
+
+    if (targetLang !== 'en' && result.diagnosis && result.treatment_advice) {
+      const [transDiagnosis, transTreatment] = await Promise.all([
+        translateText(result.diagnosis, targetLang),
+        translateText(result.treatment_advice, targetLang),
+      ])
+      diagnosisToSave = transDiagnosis
+      treatmentToSave = transTreatment
+    }
+
     // ── 4. Persist the successful diagnosis ───────────────────────────────
     // Note: `disease_checks` has no crop_type column, so it is not stored here.
     const { data: check, error: checkError } = await supabase
@@ -193,9 +229,9 @@ export async function POST(request: Request) {
       .insert({
         user_id: user.id,
         image_url: imageUrl,
-        diagnosis: result.diagnosis,
+        diagnosis: diagnosisToSave,
         confidence_score: result.confidence_score,
-        treatment_advice: result.treatment_advice,
+        treatment_advice: treatmentToSave,
       })
       .select('id')
       .single<{ id: string }>()
@@ -226,9 +262,9 @@ export async function POST(request: Request) {
 
     // ── 6. Respond ────────────────────────────────────────────────────────
     return NextResponse.json({
-      diagnosis: result.diagnosis,
+      diagnosis: diagnosisToSave,
       confidence_score: result.confidence_score,
-      treatment_advice: result.treatment_advice,
+      treatment_advice: treatmentToSave,
       escalated: caseId !== null,
       case_id: caseId,
       disease_check_id: check.id,

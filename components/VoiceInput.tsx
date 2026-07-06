@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import VoiceWaveform from '@/components/VoiceWaveform'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,6 +49,7 @@ const MAX_RECORDING_SECONDS = 15
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function VoiceInput({ onTranscript }: VoiceInputProps) {
+  const { t } = useLanguage()
   const [state, setState] = useState<VoiceState>('idle')
   const [countdown, setCountdown] = useState(MAX_RECORDING_SECONDS)
   const [transcript, setTranscript] = useState('')
@@ -150,7 +152,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
 
       // Reject recordings that are too short / nearly silent
       if (blob.size < 5000) {
-        setErrorDetail('Recording too short. Please try again.')
+        setErrorDetail(t('voice.error.tooShort'))
         setState('stt-error')
         return
       }
@@ -160,7 +162,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
         const result = await transcribeAudio(base64)
 
         if (!result.trim()) {
-          setErrorDetail('No speech detected. Please try again or type your description.')
+          setErrorDetail(t('voice.error.noSpeech'))
           setState('stt-error')
           return
         }
@@ -169,7 +171,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
         setState('done')
         onTranscript(result)
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Transcription failed.'
+        const msg = err instanceof Error ? err.message : t('voice.error.transcriptionFailed')
         setErrorDetail(msg)
         setState('stt-error')
       }
@@ -209,7 +211,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
           className="flex w-full items-center justify-center gap-2.5 rounded-2xl border-2 border-dashed border-primary-green/30 bg-primary-green/5 px-5 py-4 text-sm font-semibold text-primary-green transition-all hover:border-primary-green/50 hover:bg-primary-green/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 min-h-[44px]"
         >
           {MicIcon}
-          🎙 Describe Your Problem
+          {t('voice.describeBtn')}
         </button>
       )}
 
@@ -222,7 +224,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
               <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500" />
             </span>
             <span className="text-sm font-semibold text-rose-700">
-              Recording… {countdown}s
+              {t('voice.recordingCountdown', { seconds: countdown })}
             </span>
           </div>
 
@@ -241,7 +243,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40 min-h-[44px] min-w-[120px]"
           >
             {StopIcon}
-            Stop Recording
+            {t('voice.stopBtn')}
           </button>
         </div>
       )}
@@ -250,7 +252,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
       {state === 'transcribing' && (
         <div className="flex items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white p-6">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-green border-t-transparent" />
-          <span className="text-sm font-medium text-slate-600">Transcribing your voice…</span>
+          <span className="text-sm font-medium text-slate-600">{t('voice.transcribing')}</span>
         </div>
       )}
 
@@ -258,14 +260,14 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
       {state === 'done' && (
         <div className="space-y-2">
           <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Your description (you can edit before submitting)
+            {t('voice.editLabel')}
           </label>
           <textarea
             value={transcript}
             onChange={(e) => handleTextChange(e.target.value)}
             rows={4}
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 leading-relaxed shadow-sm transition-colors focus:border-primary-green/50 focus:outline-none focus:ring-2 focus:ring-primary-green/20 resize-y"
-            placeholder="Edit your description here…"
+            placeholder={t('voice.editPlaceholder')}
           />
           <button
             type="button"
@@ -276,7 +278,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
             }}
             className="text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors"
           >
-            ↻ Re-record
+            ↻ {t('voice.rerecord')}
           </button>
         </div>
       )}
@@ -287,18 +289,18 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
           <div className="flex items-start gap-2.5 rounded-2xl border border-accent-amber/20 bg-accent-amber/5 p-3.5">
             <span className="mt-0.5 shrink-0 text-accent-amber text-sm">⚠️</span>
             <p className="text-sm text-slate-600">
-              Microphone access denied. Please type your description instead.
+              {t('voice.micDenied')}
             </p>
           </div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Describe your crop problem
+            {t('voice.describeLabel')}
           </label>
           <textarea
             value={transcript}
             onChange={(e) => handleTextChange(e.target.value)}
             rows={4}
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 leading-relaxed shadow-sm transition-colors focus:border-primary-green/50 focus:outline-none focus:ring-2 focus:ring-primary-green/20 resize-y"
-            placeholder="E.g. My rice leaves are turning yellow with brown spots…"
+            placeholder={t('voice.placeholder')}
           />
         </div>
       )}
@@ -309,7 +311,7 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
           <div className="flex items-start gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 p-3.5">
             <span className="mt-0.5 shrink-0 text-rose-500 text-sm">❌</span>
             <div>
-              <p className="text-sm font-medium text-rose-700">Transcription failed</p>
+              <p className="text-sm font-medium text-rose-700">{t('voice.failed')}</p>
               {errorDetail && (
                 <p className="mt-0.5 text-xs text-rose-600">{errorDetail}</p>
               )}
@@ -325,14 +327,14 @@ export function VoiceInput({ onTranscript }: VoiceInputProps) {
               className="inline-flex items-center gap-1.5 rounded-lg bg-primary-green px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-primary-green/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 min-h-[44px]"
             >
               {MicIcon}
-              Try Again
+              {t('voice.tryAgain')}
             </button>
             <button
               type="button"
               onClick={() => setState('mic-denied')}
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/40 min-h-[44px]"
             >
-              Type Instead
+              {t('voice.typeInstead')}
             </button>
           </div>
         </div>

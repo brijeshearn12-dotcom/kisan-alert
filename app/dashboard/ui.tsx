@@ -16,6 +16,8 @@ import { EntranceAnimation } from '@/components/EntranceAnimation'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { NotificationPanel } from '@/components/NotificationPanel'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { type TranslationKey, getCropTranslationKey, getLanguageMeta, type LanguageCode } from '@/lib/i18n/translations'
 
 // ── Types (mirror GET /api/dashboard) ───────────────────────────────────────
 
@@ -62,29 +64,32 @@ export type Status = 'loading' | 'ready' | 'error'
 
 // ── Formatting helpers ──────────────────────────────────────────────────────
 
-export function greetingFor(date: Date): string {
+export function greetingFor(date: Date, t: (key: TranslationKey) => string): string {
   const hour = date.getHours()
-  if (hour < 12) return 'Good morning'
-  if (hour < 17) return 'Good afternoon'
-  return 'Good evening'
+  if (hour < 12) return t('dashboard.greeting.morning')
+  if (hour < 17) return t('dashboard.greeting.afternoon')
+  return t('dashboard.greeting.evening')
 }
 
 /** Local-midnight parse so a YYYY-MM-DD date never slips to the previous day. */
-export function dayLabel(iso: string, index: number): string {
-  if (index === 0) return 'Today'
-  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })
+export function dayLabel(iso: string, index: number, t: (key: TranslationKey) => string, lang: LanguageCode): string {
+  if (index === 0) return t('dashboard.day.today')
+  const locale = getLanguageMeta(lang).locale
+  return new Date(`${iso}T00:00:00`).toLocaleDateString(locale, { weekday: 'short' })
 }
 
-export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
+export function formatDate(iso: string, lang: LanguageCode): string {
+  const locale = getLanguageMeta(lang).locale
+  return new Date(iso).toLocaleDateString(locale, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
   })
 }
 
-export function formatTime(date: Date): string {
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+export function formatTime(date: Date, lang: LanguageCode): string {
+  const locale = getLanguageMeta(lang).locale
+  return date.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })
 }
 
 // ── Inline icons (stroke style, matches the rest of the app) ─────────────────
@@ -169,12 +174,7 @@ const LogoutPath = (
     <path d="M21 12H9" />
   </>
 )
-const RefreshPath = (
-  <>
-    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-    <path d="M3 3v5h5" />
-  </>
-)
+
 
 // ── Top navigation ───────────────────────────────────────────────────────────
 
@@ -191,6 +191,8 @@ export function TopNav({
   signingOut: boolean
   showUser: boolean
 }) {
+  const { t } = useLanguage()
+
   return (
     <header className="sticky top-0 z-10 border-b border-slate-100 bg-white/80 backdrop-blur-sm">
       <nav
@@ -231,7 +233,7 @@ export function TopNav({
               className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 disabled:opacity-60"
             >
               <Icon size={14}>{LogoutPath}</Icon>
-              <span className="hidden sm:inline">{signingOut ? 'Signing out…' : 'Sign out'}</span>
+              <span className="hidden sm:inline">{signingOut ? t('dashboard.signingOut') : t('dashboard.signOut')}</span>
             </button>
           </div>
         )}
@@ -243,7 +245,8 @@ export function TopNav({
 // ── Welcome header ───────────────────────────────────────────────────────────
 
 export function WelcomeHeader({ name, district }: { name: string | null; district: string | null }) {
-  const greeting = greetingFor(new Date())
+  const { t } = useLanguage()
+  const greeting = greetingFor(new Date(), t)
 
   return (
     <header>
@@ -253,8 +256,8 @@ export function WelcomeHeader({ name, district }: { name: string | null; distric
       </h1>
       <p className="mt-1.5 text-sm leading-relaxed text-slate-500">
         {district
-          ? `Here is what is happening around ${district} today.`
-          : 'Here is your farm overview for today.'}
+          ? t('dashboard.overviewWithDistrict', { district })
+          : t('dashboard.overviewFallback')}
       </p>
     </header>
   )
@@ -269,20 +272,22 @@ export function WeatherCard({
   weather: Weather | null
   fetchedAt: Date | null
 }) {
+  const { t, language } = useLanguage()
+
   return (
     <EntranceAnimation>
       <section
-        aria-label="Weather"
+        aria-label={t('weather.title')}
         className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
       >
       <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3 sm:px-6">
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">
-          Local weather
+          {t('dashboard.weather.localWeather')}
         </h2>
         {fetchedAt && (
           <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
             <Icon size={13}>{ClockPath}</Icon>
-            Updated {formatTime(fetchedAt)}
+            {t('dashboard.weather.updatedAt', { time: formatTime(fetchedAt, language) })}
           </span>
         )}
       </div>
@@ -297,19 +302,19 @@ export function WeatherCard({
                 </span>
                 <span className="mt-1 text-lg font-medium text-slate-400">°C</span>
               </div>
-              <p className="mt-1 text-xs text-slate-500">Current temperature</p>
+              <p className="mt-1 text-xs text-slate-500">{t('dashboard.weather.currentTemp')}</p>
             </div>
 
             <div className="flex gap-2">
-              <Stat icon={DropPath} label="Humidity" value={`${Math.round(weather.humidity)}%`} />
-              <Stat icon={ThermPath} label="Rain today" value={`${weather.rainfall} mm`} />
+              <Stat icon={DropPath} label={t('dashboard.weather.humidity')} value={`${Math.round(weather.humidity)}%`} />
+              <Stat icon={ThermPath} label={t('dashboard.weather.rainToday')} value={`${weather.rainfall} mm`} />
             </div>
           </div>
 
           {weather.forecast.length > 0 && (
             <div className="mt-5 border-t border-slate-100 pt-4">
               <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.07em] text-slate-400">
-                5-day forecast
+                {t('dashboard.weather.forecast5Day')}
               </p>
               <ul className="grid grid-cols-5 gap-1.5">
                 {weather.forecast.slice(0, 5).map((day, index) => (
@@ -318,7 +323,7 @@ export function WeatherCard({
                     className="flex flex-col items-center gap-1 rounded-xl border border-slate-100 bg-slate-50/60 py-2.5"
                   >
                     <span className="text-[11px] font-medium text-slate-500">
-                      {dayLabel(day.date, index)}
+                      {dayLabel(day.date, index, t, language)}
                     </span>
                     <span className="text-[13px] font-semibold text-slate-900 tabular-nums">
                       {Math.round(day.temperature_max)}°
@@ -345,10 +350,9 @@ export function WeatherCard({
             <Icon size={18}>{PinPath}</Icon>
           </span>
           <div>
-            <p className="text-sm font-medium text-slate-700">Weather unavailable</p>
+            <p className="text-sm font-medium text-slate-700">{t('dashboard.weather.unavailable')}</p>
             <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-              We could not load a forecast for your area. Set your district in a recommendation to
-              see live weather here.
+              {t('dashboard.weather.unavailableDetail')}
             </p>
           </div>
         </div>
@@ -373,11 +377,13 @@ function Stat({ icon, label, value }: { icon: ReactNode; label: string; value: s
 // ── Dry spell banner ─────────────────────────────────────────────────────────
 
 export function DrySpellBanner() {
+  const { t } = useLanguage()
+
   return (
     <EntranceAnimation>
       <section
         role="alert"
-        aria-label="Dry spell warning"
+        aria-label={t('dashboard.drySpell')}
         className="flex flex-col gap-3 rounded-2xl border border-accent-amber/20 bg-accent-amber/5 p-5 sm:flex-row sm:items-center sm:justify-between"
       >
       <div className="flex items-start gap-3">
@@ -385,10 +391,9 @@ export function DrySpellBanner() {
           <Icon size={18}>{WarningPath}</Icon>
         </span>
         <div>
-          <p className="text-sm font-semibold text-slate-900">Dry spell expected</p>
+          <p className="text-sm font-semibold text-slate-900">{t('dashboard.drySpell')}</p>
           <p className="mt-0.5 text-xs leading-relaxed text-slate-600">
-            No meaningful rain is forecast for the next several days. Choose a crop that suits low
-            rainfall and plan your irrigation early.
+            {t('dashboard.drySpellDetail')}
           </p>
         </div>
       </div>
@@ -396,7 +401,7 @@ export function DrySpellBanner() {
         href="/recommendation"
         className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-accent-amber px-4 text-xs font-semibold text-white transition-colors hover:bg-accent-amber/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-amber/50 focus-visible:ring-offset-1"
       >
-        View recommendations
+        {t('dashboard.viewRecommendations')}
         <Icon size={14}>{ArrowRightPath}</Icon>
       </Link>
       </section>
@@ -407,19 +412,21 @@ export function DrySpellBanner() {
 // ── Recommendation card ──────────────────────────────────────────────────────
 
 export function RecommendationCard({ recommendation }: { recommendation: Recommendation | null }) {
+  const { t, language } = useLanguage()
+
   if (!recommendation || !recommendation.crop_name) {
     return (
       <EntranceAnimation>
         <EmptyState
           icon={<Icon size={20}>{SproutPath}</Icon>}
-          title="Get your first recommendation"
-          description="Tell us your soil type and district, and we will suggest the best crop for this season using live weather data."
+          title={t('dashboard.getFirstRec')}
+          description={t('dashboard.getFirstRecDetail')}
           action={
             <Link
               href="/recommendation"
               className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-primary-green px-5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-green/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 focus-visible:ring-offset-2"
             >
-              <span>Get a recommendation</span>
+              <span>{t('dashboard.getRecBtn')}</span>
               <Icon size={15}>{ArrowRightPath}</Icon>
             </Link>
           }
@@ -435,17 +442,17 @@ export function RecommendationCard({ recommendation }: { recommendation: Recomme
   return (
     <EntranceAnimation>
       <section
-        aria-label="Latest recommendation"
+        aria-label={t('dashboard.latestRec')}
         className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
       >
       <div className="p-5 sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">
-              Latest recommendation
+              {t('dashboard.latestRec')}
             </p>
             <h2 className="mt-1.5 truncate text-2xl font-semibold tracking-tight text-slate-900">
-              {recommendation.crop_name}
+              {t(getCropTranslationKey(recommendation.crop_name))}
             </h2>
           </div>
           <span
@@ -464,13 +471,13 @@ export function RecommendationCard({ recommendation }: { recommendation: Recomme
       <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3 sm:px-6">
         <span className="flex items-center gap-1.5 text-xs text-slate-400">
           <Icon size={13}>{ClockPath}</Icon>
-          {formatDate(recommendation.created_at)}
+          {formatDate(recommendation.created_at, language)}
         </span>
         <Link
           href="/recommendation"
           className="flex items-center gap-1 rounded text-xs font-medium text-primary-green transition-colors hover:text-primary-green/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
         >
-          New recommendation
+          {t('dashboard.newRec')}
           <Icon size={13}>{ArrowRightPath}</Icon>
         </Link>
       </div>
@@ -489,23 +496,25 @@ interface Action {
 }
 
 export function QuickActions({ isExpert }: { isExpert: boolean }) {
+  const { t } = useLanguage()
+
   const actions: Action[] = [
     {
       href: '/recommendation',
-      title: 'Crop Recommendation',
-      description: 'Find the best crop for your soil and weather.',
+      title: t('dashboard.action.cropRec'),
+      description: t('dashboard.action.cropRecDesc'),
       icon: SproutPath,
     },
     {
       href: '/disease-check',
-      title: 'Disease Check',
-      description: 'Diagnose a crop disease from a photo.',
+      title: t('dashboard.action.diseaseCheck'),
+      description: t('dashboard.action.diseaseCheckDesc'),
       icon: ScanPath,
     },
     {
       href: '/history',
-      title: 'Activity History',
-      description: 'View your recommendation and diagnosis logs.',
+      title: t('dashboard.action.history'),
+      description: t('dashboard.action.historyDesc'),
       icon: ClockPath,
     },
   ]
@@ -513,17 +522,17 @@ export function QuickActions({ isExpert }: { isExpert: boolean }) {
   if (isExpert) {
     actions.push({
       href: '/expert',
-      title: 'RSK Dashboard',
-      description: 'Review escalated farmer cases.',
+      title: t('dashboard.action.expert'),
+      description: t('dashboard.action.expertDesc'),
       icon: ShieldPath,
     })
   }
 
   return (
     <EntranceAnimation>
-      <section aria-label="Quick actions">
+      <section aria-label={t('dashboard.action.quickActions')}>
       <h2 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">
-        Quick actions
+        {t('dashboard.action.quickActions')}
       </h2>
       <div
         className={`grid grid-cols-1 gap-3 ${
@@ -561,6 +570,8 @@ export function QuickActions({ isExpert }: { isExpert: boolean }) {
 // ── Footer ───────────────────────────────────────────────────────────────────
 
 export function SiteFooter() {
+  const { t } = useLanguage()
+
   return (
     <footer className="mt-auto border-t border-slate-100 bg-white">
       <div className="mx-auto flex w-full max-w-4xl flex-col items-center justify-between gap-2 px-5 py-5 text-xs text-slate-400 sm:flex-row sm:px-6">
@@ -570,7 +581,7 @@ export function SiteFooter() {
           </span>
           Kisan Alert
         </span>
-        <span>AI crop advisory for smallholder farmers</span>
+        <span>{t('dashboard.footerTagline')}</span>
       </div>
     </footer>
   )
@@ -636,12 +647,14 @@ export function DashboardSkeleton() {
 // ── Error state ──────────────────────────────────────────────────────────────
 
 export function ErrorCard({ onRetry }: { onRetry: () => void }) {
+  const { t } = useLanguage()
+
   return (
     <EntranceAnimation>
       <ErrorState
         icon={<Icon size={20}>{WarningPath}</Icon>}
-        title="We could not load your dashboard"
-        description="Something went wrong while fetching your latest weather and recommendation. Please try again."
+        title={t('dashboard.loadFailed')}
+        description={t('dashboard.loadFailedDetail')}
         onRetry={onRetry}
       />
     </EntranceAnimation>

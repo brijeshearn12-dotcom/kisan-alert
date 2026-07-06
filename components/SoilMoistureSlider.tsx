@@ -1,5 +1,7 @@
 'use client'
 
+import { useLanguage } from '@/contexts/LanguageContext'
+
 interface SoilMoistureSliderProps {
   value: number
   onChange: (value: number) => void
@@ -9,17 +11,19 @@ export default function SoilMoistureSlider({
   value,
   onChange,
 }: SoilMoistureSliderProps) {
+  const { t } = useLanguage()
+
   // Interpretation styling
-  let statusText = 'Adequate: No irrigation needed'
+  let statusText = t('soil.moisture.status.adequate')
   let statusStyle = 'bg-blue-50 text-blue-700 border-blue-200/50'
   let dotStyle = 'bg-blue-500'
 
   if (value <= 30) {
-    statusText = 'Low: Consider irrigating'
+    statusText = t('soil.moisture.status.low')
     statusStyle = 'bg-emerald-50 text-emerald-700 border-emerald-200/50'
     dotStyle = 'bg-emerald-500'
   } else if (value <= 60) {
-    statusText = 'Moderate: Monitor soil moisture'
+    statusText = t('soil.moisture.status.moderate')
     statusStyle = 'bg-amber-50 text-amber-600 border-amber-200/50'
     dotStyle = 'bg-amber-500'
   }
@@ -28,7 +32,7 @@ export default function SoilMoistureSlider({
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Soil Moisture Sensor
+          {t('soil.moisture.sensor')}
         </span>
         <span className="text-sm font-bold text-slate-800">{value}%</span>
       </div>

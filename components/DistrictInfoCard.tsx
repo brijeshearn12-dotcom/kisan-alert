@@ -15,6 +15,8 @@
  */
 
 import React from 'react'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { type TranslationKey, getCropTranslationKey } from '@/lib/i18n/translations'
 
 interface Weather {
   temperature: number
@@ -77,6 +79,7 @@ export default function DistrictInfoCard({
   recommendedCrop,
   recommendationConfidence,
 }: DistrictInfoCardProps) {
+  const { t } = useLanguage()
   
   // Resolve vegetation badge style based on index status
   const getVegetationBadgeClass = (status: string | null) => {
@@ -96,8 +99,19 @@ export default function DistrictInfoCard({
 
   // Translate database soil ids to display labels
   const getSoilLabel = (id: string | null) => {
-    if (!id) return 'Unselected'
-    return id.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    if (!id) return t('hud.unselected')
+    return t(`soil.${id}.label` as TranslationKey)
+  }
+
+  const getTranslatedVegStatus = (status: string | null) => {
+    if (!status) return ''
+    const s = status.toLowerCase()
+    if (s === 'parched') return t('veg.status.parched')
+    if (s === 'critical') return t('veg.status.critical')
+    if (s === 'stressed') return t('veg.status.stressed')
+    if (s === 'saturated') return t('veg.status.saturated')
+    if (s === 'healthy') return t('veg.status.healthy')
+    return status
   }
 
   return (
@@ -108,15 +122,15 @@ export default function DistrictInfoCard({
         <div className="flex items-center gap-1.5 text-slate-400">
           <span className="text-emerald-500 dark:text-emerald-400">{PinIcon}</span>
           <span className="text-xs font-semibold uppercase tracking-wider">
-            District Intelligence HUD
+            {t('hud.title')}
           </span>
         </div>
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            {districtName || 'Select a District'}
+            {districtName || t('hud.selectDistrict')}
           </h2>
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-            {stateName || 'India'}
+            {stateName || t('hud.india')}
           </p>
         </div>
       </div>
@@ -126,7 +140,7 @@ export default function DistrictInfoCard({
         {/* Temp Card */}
         <div className="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-slate-50/50 p-2.5 text-center dark:border-slate-800 dark:bg-slate-950/50">
           <span className="text-slate-400 dark:text-slate-500">{ThermometerIcon}</span>
-          <span className="mt-1 text-[11px] font-medium text-slate-400 uppercase tracking-wide">Temp</span>
+          <span className="mt-1 text-[11px] font-medium text-slate-400 uppercase tracking-wide">{t('hud.temp')}</span>
           {weatherLoading ? (
             <div className="mt-1.5 h-4 w-10 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
           ) : (
@@ -139,7 +153,7 @@ export default function DistrictInfoCard({
         {/* Humidity Card */}
         <div className="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-slate-50/50 p-2.5 text-center dark:border-slate-800 dark:bg-slate-950/50">
           <span className="text-slate-400 dark:text-slate-500">{DropletIcon}</span>
-          <span className="mt-1 text-[11px] font-medium text-slate-400 uppercase tracking-wide">Humidity</span>
+          <span className="mt-1 text-[11px] font-medium text-slate-400 uppercase tracking-wide">{t('hud.humidity')}</span>
           {weatherLoading ? (
             <div className="mt-1.5 h-4 w-10 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
           ) : (
@@ -152,7 +166,7 @@ export default function DistrictInfoCard({
         {/* Rain Card */}
         <div className="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-slate-50/50 p-2.5 text-center dark:border-slate-800 dark:bg-slate-950/50">
           <span className="text-slate-400 dark:text-slate-500">{RainIcon}</span>
-          <span className="mt-1 text-[11px] font-medium text-slate-400 uppercase tracking-wide">Rain</span>
+          <span className="mt-1 text-[11px] font-medium text-slate-400 uppercase tracking-wide">{t('hud.rain')}</span>
           {weatherLoading ? (
             <div className="mt-1.5 h-4 w-10 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
           ) : (
@@ -166,18 +180,18 @@ export default function DistrictInfoCard({
       {/* Soil Type and Vegetation Score */}
       <div className="mt-5 space-y-4 border-t border-slate-100 pt-4 dark:border-slate-800">
         <div className="flex justify-between items-center text-xs">
-          <span className="font-medium text-slate-400 uppercase tracking-wide">Soil Type</span>
+          <span className="font-medium text-slate-400 uppercase tracking-wide">{t('hud.soilType')}</span>
           <span className="font-semibold text-slate-800 dark:text-slate-200">
             {getSoilLabel(soilType)}
           </span>
         </div>
 
         <div className="flex justify-between items-center text-xs">
-          <span className="font-medium text-slate-400 uppercase tracking-wide">Vegetation Score</span>
+          <span className="font-medium text-slate-400 uppercase tracking-wide">{t('hud.vegScore')}</span>
           {vegetationScore !== null ? (
             <div className="flex items-center gap-2">
               <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${getVegetationBadgeClass(vegetationStatus)}`}>
-                {vegetationStatus}
+                {getTranslatedVegStatus(vegetationStatus)}
               </span>
               <span className="font-bold text-slate-900 dark:text-white tabular-nums">
                 {vegetationScore}/100
@@ -194,22 +208,22 @@ export default function DistrictInfoCard({
         <div className="flex items-start justify-between gap-3">
           <div>
             <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
-              Recommended Crop
+              {t('hud.recommendedCrop')}
             </span>
             <h4 className="mt-0.5 text-base font-bold text-slate-900 dark:text-white">
-              {recommendedCrop || 'Generate crop recommendation below'}
+              {recommendedCrop ? t(getCropTranslationKey(recommendedCrop)) : t('hud.generatePrompt')}
             </h4>
           </div>
           {recommendationConfidence !== null && (
             <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/10 dark:bg-emerald-950/30 dark:text-emerald-400">
-              {Math.round(recommendationConfidence * 100)}% Conf
+              {t('hud.confPercent', { percent: Math.round(recommendationConfidence * 100) })}
             </span>
           )}
         </div>
 
         <div className="mt-3 border-t border-slate-200/50 pt-2.5 dark:border-slate-800/50">
           <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
-            Advisory Signal
+            {t('hud.advisorySignal')}
           </span>
           {aiAdvisoryLoading ? (
             <div className="mt-2 space-y-1.5 animate-pulse">
@@ -218,7 +232,7 @@ export default function DistrictInfoCard({
             </div>
           ) : (
             <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-              {aiAdvisory || 'Select your soil type below and run a diagnostic recommendation.'}
+              {aiAdvisory || t('hud.advisoryPrompt')}
             </p>
           )}
         </div>

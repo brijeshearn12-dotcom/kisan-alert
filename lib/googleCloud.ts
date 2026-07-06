@@ -14,7 +14,7 @@
  */
 
 /** Languages the app can translate into. English is the source/pass-through. */
-type TargetLang = 'en' | 'hi' | 'mr' | 'gu' | 'kn' | 'ta' | 'te' | 'bn'
+export type TargetLang = 'en' | 'hi' | 'mr' | 'gu' | 'kn' | 'ta' | 'te' | 'bn'
 
 /** BCP-47 voice locales supported by Text-to-Speech in this app. */
 type LanguageCode = 'hi-IN' | 'te-IN' | 'mr-IN' | 'en-IN'

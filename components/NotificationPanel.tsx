@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { database } from '@/lib/firebase'
 import { ref, onValue, update } from 'firebase/database'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { getLanguageMeta } from '@/lib/i18n/translations'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,8 +42,9 @@ export function NotificationPanel() {
   const [userId, setUserId] = useState<string | null>(null)
   const [animateBadge, setAnimateBadge] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const { t, language } = useLanguage()
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // 1. Fetch authenticated user ID on mount
   useEffect(() => {
@@ -64,7 +67,7 @@ export function NotificationPanel() {
     return () => {
       subscription.unsubscribe()
     }
-  }, [])
+  }, [supabase])
 
   // 2. Set up real-time Firebase Realtime Database listener
   useEffect(() => {
@@ -143,7 +146,7 @@ export function NotificationPanel() {
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className="relative rounded-full p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
-        aria-label={`Open notifications, ${unreadCount} unread`}
+        aria-label={t('notification.ariaOpen', { count: unreadCount })}
         aria-expanded={isOpen}
       >
         {BellIcon}
@@ -162,10 +165,10 @@ export function NotificationPanel() {
       {isOpen && (
         <div className="absolute right-0 mt-2.5 w-80 origin-top-right rounded-2xl border border-slate-100 bg-white shadow-xl ring-1 ring-black/5 focus:outline-none z-50 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="flex items-center justify-between border-b border-slate-50 px-4 py-3">
-            <h3 className="text-sm font-semibold text-slate-800">Notifications</h3>
+            <h3 className="text-sm font-semibold text-slate-800">{t('notification.title')}</h3>
             {unreadCount > 0 && (
               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">
-                {unreadCount} new
+                {t('notification.newCount', { count: unreadCount })}
               </span>
             )}
           </div>
@@ -173,7 +176,7 @@ export function NotificationPanel() {
           <div className="max-h-72 overflow-y-auto divide-y divide-slate-50">
             {notifications.length === 0 ? (
               <div className="px-4 py-8 text-center text-xs text-slate-400">
-                No notifications yet
+                {t('notification.empty')}
               </div>
             ) : (
               notifications.map((item) => (
@@ -195,7 +198,7 @@ export function NotificationPanel() {
                       {item.message}
                     </p>
                     <p className="mt-1 text-[10px] text-slate-400">
-                      {new Date(item.timestamp).toLocaleTimeString([], {
+                      {new Date(item.timestamp).toLocaleTimeString(getLanguageMeta(language).locale, {
                         hour: '2-digit',
                         minute: '2-digit',
                       })}

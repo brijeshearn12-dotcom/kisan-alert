@@ -17,6 +17,7 @@
  */
 import { useState } from 'react'
 import type { SoilTypeId } from '@/lib/constants'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 /** A demo scenario. `soilId` maps the display soil to an existing SoilTypeId. */
 interface DemoPreset {
@@ -89,6 +90,7 @@ export default function DemoPresetChips({
   submitting,
 }: DemoPresetChipsProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
+  const { t } = useLanguage()
 
   /** Case-insensitive resolve of a preset to a seeded district id, or null. */
   function resolveDistrictId(preset: DemoPreset): string | null {
@@ -120,10 +122,10 @@ export default function DemoPresetChips({
     <section aria-label="Demo scenarios" className="mb-6">
       <div className="mb-2.5 flex items-center gap-2">
         <span className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">
-          Try a demo scenario
+          {t('demo.tryScenario')}
         </span>
         <span className="rounded-full bg-primary-green/10 px-2 py-0.5 text-[10px] font-medium text-primary-green">
-          One click
+          {t('demo.oneClick')}
         </span>
       </div>
 
@@ -136,6 +138,13 @@ export default function DemoPresetChips({
           const isLoading = isActive && submitting
           const disabled = submitting || !available
 
+          const translatedSoilLabel = 
+            preset.id === 'black' ? t('soil.black_cotton.label') :
+            preset.id === 'alluvial' ? t('soil.loamy.label') :
+            preset.id === 'red' ? t('soil.red.label') :
+            preset.id === 'arid' ? t('soil.sandy.label') :
+            preset.id === 'laterite' ? t('soil.laterite.label') : preset.soilLabel
+
           return (
             <button
               key={preset.id}
@@ -144,10 +153,10 @@ export default function DemoPresetChips({
               onClick={() => districtId && handleClick(preset, districtId)}
               aria-label={
                 available
-                  ? `Load demo: ${preset.soilLabel}, ${preset.district}, ${preset.state}, soil moisture ${preset.moisture} percent`
-                  : `${preset.soilLabel} demo unavailable — ${preset.district} is not in the district list`
+                  ? t('demo.loadDemoAria', { soil: translatedSoilLabel, district: preset.district, state: preset.state, moisture: preset.moisture })
+                  : t('demo.unavailableAria', { soil: translatedSoilLabel, district: preset.district })
               }
-              title={available ? undefined : `${preset.district}, ${preset.state} is not available`}
+              title={available ? undefined : t('demo.unavailableTitle', { district: preset.district, state: preset.state })}
               className={[
                 'group relative flex shrink-0 items-center gap-2.5 rounded-full border px-3.5 py-2 text-left shadow-sm transition-all duration-200',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 focus-visible:ring-offset-1',
@@ -168,7 +177,7 @@ export default function DemoPresetChips({
               </span>
               <span className="min-w-0 pr-0.5">
                 <span className="block whitespace-nowrap text-xs font-semibold text-slate-800">
-                  {preset.soilLabel}
+                  {translatedSoilLabel}
                 </span>
                 <span className="block whitespace-nowrap text-[11px] text-slate-400">
                   {preset.district}, {preset.state}

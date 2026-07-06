@@ -16,7 +16,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CurrentWeather } from '@/lib/weather'
-import { getSeasonForMonth, seasonLabel, type Season } from '@/lib/season'
+import { getSeasonForMonth } from '@/lib/season'
 import {
   computeConfidence,
   computeIndex,
@@ -26,25 +26,28 @@ import {
 } from '@/lib/vegetationIndex'
 import { ListenButton } from '@/components/ListenButton'
 import SoilMoistureSlider from '@/components/SoilMoistureSlider'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { toSpeechLocale } from '@/lib/i18n/speech'
+import { type TranslationKey, getLanguageMeta } from '@/lib/i18n/translations'
 
 interface VegetationIndexCardProps {
   latitude: number | null
   longitude: number | null
   districtName: string
-  stateName?: string
+  stateName: string
+  /** If provided, we bypass the internal fetch and reuse the parent's weather data. */
   externalWeather?: CurrentWeather | null
   externalWeatherLoading?: boolean
   externalFetchedAt?: Date | null
-  /** When provided, the soil-moisture slider is controlled by the parent. */
-  soilMoisture?: number
-  onSoilMoistureChange?: (value: number) => void
-  onIndexChange?: (score: number, status: string) => void
+  /** Shared soil moisture (0-100), lifted so the parent HUD can display it. */
+  soilMoisture: number
+  onSoilMoistureChange: (value: number) => void
+  /** Bubble updates back to the parent so the HUD card can display them in sync. */
+  onIndexChange?: (score: number, status: VegetationStatus) => void
   onAdviceChange?: (advice: string, loading: boolean) => void
 }
 
 type WeatherStatus = 'idle' | 'loading' | 'ready' | 'error'
-
-// ── Presentation maps (UI-only; scoring lives in lib/vegetationIndex.ts) ──────
 
 interface BadgeStyle {
   emoji: string
@@ -88,115 +91,126 @@ const CONFIDENCE_STYLE: Record<Confidence, { label: string; className: string }>
   low: { label: 'Low', className: 'bg-slate-100 text-slate-500 ring-slate-300/40' },
 }
 
-// ── Small inline icons (match the recommendation page's stroke style) ─────────
+const CheckIcon = (
+  <svg
+    viewBox="0 0 24 24"
+    width="10"
+    height="10"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="3.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
+)
 
 const ChevronIcon = (
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg
+    viewBox="0 0 24 24"
+    width="16"
+    height="16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
     <path d="m6 9 6 6 6-6" />
   </svg>
 )
 
-const CheckIcon = (
-  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="m20 6-11 11-5-5" />
-  </svg>
-)
+// ── Custom Hooks ─────────────────────────────────────────────────────────────
 
-// ── Hooks: count-up + reduced motion ─────────────────────────────────────────
-
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false)
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing an external media-query value on mount
-    setReduced(mq.matches)
-    const onChange = () => setReduced(mq.matches)
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [])
-  return reduced
-}
-
-/** Animate a whole number toward `target` over ~450ms (Step 8). */
-function useCountUp(target: number, disabled: boolean): number {
-  const [display, setDisplay] = useState(target)
-  const fromRef = useRef(target)
-  const rafRef = useRef<number | null>(null)
+/** Animate numbers counting up to prevent jarring layout jumps during sliding. */
+function useCountUp(target: number, reducedMotion: boolean): number {
+  const [count, setCount] = useState(target)
 
   useEffect(() => {
-    if (disabled) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- snap to final value when animation is disabled
-      setDisplay(target)
-      fromRef.current = target
-      return
-    }
+    if (reducedMotion) return
 
-    const from = fromRef.current
-    const delta = target - from
-    if (delta === 0) return
+    let active = true
+    const start = count
+    const end = target
+    const duration = 240 // ms
+    const startTime = performance.now()
 
-    const duration = 450
-    let start: number | null = null
+    function animate(now: number) {
+      if (!active) return
+      const elapsed = now - startTime
+      const progress = Math.min(elapsed / duration, 1)
+      const ease = 1 - Math.pow(1 - progress, 3) // easeOutCubic
+      
+      setCount(Math.round(start + (end - start) * ease))
 
-    const tick = (now: number) => {
-      if (start === null) start = now
-      const t = Math.min(1, (now - start) / duration)
-      // easeOutCubic
-      const eased = 1 - Math.pow(1 - t, 3)
-      setDisplay(Math.round(from + delta * eased))
-      if (t < 1) {
-        rafRef.current = requestAnimationFrame(tick)
-      } else {
-        fromRef.current = target
+      if (progress < 1) {
+        requestAnimationFrame(animate)
       }
     }
 
-    rafRef.current = requestAnimationFrame(tick)
+    requestAnimationFrame(animate)
     return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-      fromRef.current = target
+      active = false
     }
-  }, [target, disabled])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, reducedMotion])
 
-  return display
+  if (reducedMotion) return target
+  return count
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// ── Component ────────────────────────────────────────────────────────────────
 
 export default function VegetationIndexCard({
   latitude,
   longitude,
   districtName,
-  stateName = 'Maharashtra',
+  stateName,
   externalWeather,
   externalWeatherLoading,
   externalFetchedAt,
-  soilMoisture: externalSoilMoisture,
+  soilMoisture,
   onSoilMoistureChange,
   onIndexChange,
   onAdviceChange,
 }: VegetationIndexCardProps) {
-  const reducedMotion = usePrefersReducedMotion()
+  const { t, language } = useLanguage()
 
-  const season = useMemo<Season>(() => getSeasonForMonth(new Date().getMonth() + 1), [])
-
-  // Soil moisture is controlled by the parent when `soilMoisture` is provided
-  // (e.g. demo presets); otherwise the slider manages its own value.
-  const [internalSoilMoisture, setInternalSoilMoisture] = useState(50)
-  const soilMoisture = externalSoilMoisture ?? internalSoilMoisture
-  const setSoilMoisture = (value: number) => {
-    if (onSoilMoistureChange) onSoilMoistureChange(value)
-    else setInternalSoilMoisture(value)
-  }
+  // 1. Local state (fallback when weather isn't provided by parent HUD)
   const [internalWeather, setInternalWeather] = useState<CurrentWeather | null>(null)
   const [internalWeatherStatus, setInternalWeatherStatus] = useState<WeatherStatus>('idle')
   const [internalFetchedAt, setInternalFetchedAt] = useState<Date | null>(null)
 
-  const [advice, setAdvice] = useState<string>('')
-  const [adviceLoading, setAdviceLoading] = useState(false)
+  // 2. Local UI states
   const [breakdownOpen, setBreakdownOpen] = useState(false)
+  const [advice, setAdvice] = useState('')
+  const [adviceLoading, setAdviceLoading] = useState(false)
+  const [reducedMotion, setReducedMotion] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    }
+    return false
+  })
 
+  // 3. Keep a cache of Gemini replies bucketed by rainfall & moisture to prevent
+  // redundant LLM queries as the farmer drags the slider.
   const adviceCache = useRef<Map<string, string>>(new Map())
+
+  // Check user OS/browser animations preference on mount.
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const listener = (e: MediaQueryListEvent) => setReducedMotion(e.matches)
+    mq.addEventListener('change', listener)
+    return () => mq.removeEventListener('change', listener)
+  }, [])
+
+  // Season is always Kharif/Rabi/Summer based on calendar month (agronomic rules)
+  const season = useMemo(() => {
+    const month = new Date().getMonth() + 1
+    return getSeasonForMonth(month)
+  }, [])
 
   const isExternal = externalWeather !== undefined
   const weather = isExternal ? externalWeather : internalWeather
@@ -295,7 +309,7 @@ export default function VegetationIndexCard({
     // Bucket the volatile inputs so tiny slider nudges reuse the same advice.
     const rainBucket = Math.round(rainfallMm7d / 5) * 5
     const scoreBucket = Math.round(index.score / 5) * 5
-    const key = `${districtName}|${stateName}|${season}|${rainBucket}|${index.status}|${scoreBucket}`
+    const key = `${districtName}|${stateName}|${season}|${rainBucket}|${index.status}|${scoreBucket}|${language}`
 
     const cached = adviceCache.current.get(key)
     if (cached) {
@@ -318,6 +332,7 @@ export default function VegetationIndexCard({
             soil_moisture: soilMoisture,
             score: index.score,
             status: index.status,
+            target_lang: language,
           }),
         })
         const data = (await res.json()) as { advice?: string }
@@ -334,17 +349,24 @@ export default function VegetationIndexCard({
     // Each keystroke on the slider resets the 400ms timer (debounce); the
     // bucketed cache key then prevents redundant Gemini calls for nearby values.
     return () => clearTimeout(timer)
-  }, [hasRainfall, districtName, stateName, season, rainfallMm7d, index.score, index.status, soilMoisture])
+  }, [hasRainfall, districtName, stateName, season, rainfallMm7d, index.score, index.status, soilMoisture, language])
 
   const badge = badgeFor(index.status, index.score)
 
   if (latitude === null || longitude === null) {
     return (
       <section className="mb-6 flex h-[160px] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 text-center text-slate-500">
-        <p className="text-sm font-medium">Select a district to estimate its vegetation index</p>
+        <p className="text-sm font-medium">{t('veg.selectDistrictPrompt')}</p>
       </section>
     )
   }
+
+  const translatedBadgeLabel = 
+    badge.label === 'Critical' ? t('veg.status.critical') :
+    badge.label === 'Parched' ? t('veg.status.parched') :
+    badge.label === 'Stressed' ? t('veg.status.stressed') :
+    badge.label === 'Healthy' ? t('veg.status.healthy') :
+    badge.label === 'Saturated' ? t('veg.status.saturated') : badge.label
 
   return (
     <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -353,10 +375,10 @@ export default function VegetationIndexCard({
         <div className="min-w-0">
           <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
             <span aria-hidden="true">🌿</span>
-            Vegetation &amp; Moisture Index
+            {t('veg.indexTitle')}
           </h2>
           <p className="mt-0.5 truncate text-xs text-slate-400">
-            {districtName} · {seasonLabel(season)}
+            {districtName} · {t(`season.${season}` as TranslationKey)}
           </p>
         </div>
         <ConfidencePill confidence={confidence} />
@@ -368,19 +390,19 @@ export default function VegetationIndexCard({
           {weatherStatus === 'loading' && (
             <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-200 border-t-primary-green" aria-hidden="true" />
-              🌧 Fetching live rainfall…
+              {t('veg.fetchingRainfall')}
             </div>
           )}
           {weatherStatus === 'error' && (
             <p className="text-xs font-medium text-amber-600">
-              Live rainfall unavailable — showing an estimate from soil moisture only.
+              {t('veg.rainfallUnavailable')}
             </p>
           )}
           {hasRainfall && (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
               <span className="inline-flex items-center gap-1.5">
                 <span aria-hidden="true">🌧</span>
-                <span className="font-semibold text-slate-700">{rainfallMm7d} mm</span> rain (7-day)
+                <span className="font-semibold text-slate-700">{rainfallMm7d} mm</span> {t('veg.rainLabel')}
               </span>
               {weather && (
                 <>
@@ -390,7 +412,7 @@ export default function VegetationIndexCard({
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <span aria-hidden="true">💦</span>
-                    <span className="font-semibold text-slate-700">{weather.humidity}%</span> humidity
+                    <span className="font-semibold text-slate-700">{weather.humidity}%</span> {t('veg.humidityLabel')}
                   </span>
                 </>
               )}
@@ -399,7 +421,7 @@ export default function VegetationIndexCard({
         </div>
 
         {/* Soil moisture slider (reused component) */}
-        <SoilMoistureSlider value={soilMoisture} onChange={setSoilMoisture} />
+        <SoilMoistureSlider value={soilMoisture} onChange={onSoilMoistureChange} />
 
         {/* Animated field illustration */}
         <div className="mt-5">
@@ -410,7 +432,7 @@ export default function VegetationIndexCard({
         <div className="mt-5 flex items-end justify-between gap-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">
-              Estimated index
+              {t('veg.estimatedIndex')}
             </p>
             <p className="mt-1 flex items-baseline gap-1 tabular-nums">
               <span className="text-4xl font-semibold tracking-tight text-slate-900">
@@ -423,12 +445,12 @@ export default function VegetationIndexCard({
             className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${badge.className}`}
           >
             <span aria-hidden="true">{badge.emoji}</span>
-            {badge.label}
+            {translatedBadgeLabel}
           </span>
         </div>
 
         {/* Score track */}
-        <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuenow={index.score} aria-valuemin={0} aria-valuemax={100} aria-label={`Vegetation index: ${index.score} of 100`}>
+        <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuenow={index.score} aria-valuemin={0} aria-valuemax={100} aria-label={`${t('veg.estimatedIndex')}: ${index.score} / 100`}>
           <div
             className="h-full rounded-full transition-all duration-500 ease-out"
             style={{ width: `${index.score}%`, backgroundColor: groundColor(index.status) }}
@@ -444,7 +466,7 @@ export default function VegetationIndexCard({
             className="flex w-full items-center justify-between gap-2 rounded-xl px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
           >
             <span className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-500">
-              How this score is calculated
+              {t('veg.howCalculated')}
             </span>
             <span
               className={`text-slate-400 transition-transform duration-200 ${breakdownOpen ? 'rotate-180' : ''}`}
@@ -455,22 +477,22 @@ export default function VegetationIndexCard({
           {breakdownOpen && (
             <dl className="space-y-2 border-t border-slate-100 px-4 py-3 text-sm">
               <BreakdownRow
-                label="Soil moisture"
+                label={t('veg.soilMoistureContribution')}
                 detail={`${soilMoisture}%`}
                 points={index.breakdown.soilContribution}
               />
               <BreakdownRow
-                label="Rainfall (7-day)"
+                label={t('veg.rainfallContribution')}
                 detail={hasRainfall ? `${rainfallMm7d} mm` : 'unavailable'}
                 points={index.breakdown.rainfallContribution}
               />
               <BreakdownRow
-                label="Season"
-                detail={seasonLabel(season)}
+                label={t('veg.seasonContribution')}
+                detail={t(`season.${season}` as TranslationKey)}
                 points={index.breakdown.seasonContribution}
               />
               <div className="flex items-center justify-between border-t border-slate-100 pt-2 font-semibold text-slate-800">
-                <dt>Total</dt>
+                <dt>{t('veg.totalLabel')}</dt>
                 <dd className="tabular-nums">{index.score} pts</dd>
               </div>
             </dl>
@@ -480,22 +502,22 @@ export default function VegetationIndexCard({
         {/* Gemini advisory + Listen */}
         <div className="mt-5 border-t border-slate-100 pt-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">
-            AI advisory
+            {t('veg.aiAdvisory')}
           </p>
           {adviceLoading && !advice ? (
             <div className="mt-2 space-y-2" aria-hidden="true">
-              <p className="text-sm font-medium text-slate-400">Generating AI advisory…</p>
+              <p className="text-sm font-medium text-slate-400">{t('veg.generatingAdvisory')}</p>
               <div className="h-3.5 w-11/12 animate-pulse rounded bg-slate-100" />
               <div className="h-3.5 w-3/5 animate-pulse rounded bg-slate-100" />
             </div>
           ) : advice ? (
             <>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">{advice}</p>
-              <ListenButton text={advice} languageCode="en-IN" />
+              <ListenButton text={advice} languageCode={toSpeechLocale(language)} />
             </>
           ) : (
             <p className="mt-2 text-sm leading-relaxed text-slate-400">
-              Advisory will appear once live rainfall is available.
+              {t('veg.advisoryUnavailable')}
             </p>
           )}
         </div>
@@ -505,17 +527,16 @@ export default function VegetationIndexCard({
 
         {/* Live inputs panel */}
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <InputsPanel title="Live weather">
-            <InputRow label="Rainfall" ok={hasRainfall} />
-            <InputRow label="Temperature" ok={hasRainfall} />
-            <InputRow label="Humidity" ok={hasRainfall} />
+          <InputsPanel title={t('veg.liveWeather')}>
+            <InputRow label={t('hud.rain')} ok={hasRainfall} />
+            <InputRow label={t('hud.temp')} ok={hasRainfall} />
+            <InputRow label={t('hud.humidity')} ok={hasRainfall} />
           </InputsPanel>
-          <InputsPanel title="Manual input">
-            <InputRow label="Soil moisture" ok />
+          <InputsPanel title={t('veg.manualInput')}>
+            <InputRow label={t('veg.soilMoistureContribution')} ok />
             {fetchedAt && (
               <p className="mt-1 text-[11px] text-slate-400">
-                Updated{' '}
-                {fetchedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {t('veg.updatedAt', { time: fetchedAt.toLocaleTimeString(getLanguageMeta(language).locale, { hour: '2-digit', minute: '2-digit' }) })}
               </p>
             )}
           </InputsPanel>
@@ -524,11 +545,10 @@ export default function VegetationIndexCard({
         {/* Transparency / disclaimer */}
         <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-            Estimated Vegetation &amp; Moisture Index
+            {t('veg.indexTitle')}
           </p>
           <p className="mt-1 text-xs leading-relaxed text-slate-500">
-            Derived from live weather data and manually-entered soil moisture. This is a
-            computed advisory index — <span className="font-medium text-slate-600">not satellite imagery</span>.
+            {t('veg.derivedDetail')}
           </p>
         </div>
       </div>
@@ -539,14 +559,20 @@ export default function VegetationIndexCard({
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function ConfidencePill({ confidence }: { confidence: Confidence }) {
+  const { t } = useLanguage()
   const style = CONFIDENCE_STYLE[confidence]
+  const translatedLabel = 
+    confidence === 'high' ? t('disease.confidence.high').replace(' confidence', '').replace(' विश्वास', '').replace(' ಮಟ್ಟ', '').replace(' நம்பிக்கை', '').replace(' నమ్మకం', '').replace(' বিশ্বাস', '') :
+    confidence === 'medium' ? t('disease.confidence.moderate').replace(' confidence', '').replace(' विश्वास', '').replace(' ಮಟ್ಟ', '').replace(' நம்பிக்கை', '').replace(' నమ్మకం', '').replace(' বিশ্বাস', '') :
+    confidence === 'low' ? t('disease.confidence.low').replace(' confidence', '').replace(' विश्वास', '').replace(' ಮಟ್ಟ', '').replace(' நம்பிக்கை', '').replace(' నమ్మకం', '').replace(' বিশ্বাস', '') : style.label
+
   return (
     <span
       className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ring-inset ${style.className}`}
-      title="Confidence reflects how many live inputs were available"
+      title={t('veg.confidenceTooltip')}
     >
-      <span className="text-[10px] uppercase tracking-wide opacity-70">Confidence</span>
-      {style.label}
+      <span className="text-[10px] uppercase tracking-wide opacity-70">{t('veg.confidenceLabel')}</span>
+      {translatedLabel}
     </span>
   )
 }
@@ -562,11 +588,11 @@ function BreakdownRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <dt className="text-slate-600">
+      <div className="text-slate-600">
         {label}
         <span className="ml-1.5 text-xs text-slate-400">{detail}</span>
-      </dt>
-      <dd className="shrink-0 tabular-nums font-medium text-slate-700">{points} pts</dd>
+      </div>
+      <div className="shrink-0 tabular-nums font-medium text-slate-700">{points} pts</div>
     </div>
   )
 }
@@ -607,6 +633,7 @@ function TomorrowOutlookRow({
   trend: 'improving' | 'declining' | 'stable'
   explanation: string
 }) {
+  const { t } = useLanguage()
   const arrow = trend === 'improving' ? '▲' : trend === 'declining' ? '▼' : '▪'
   const trendClass =
     trend === 'improving'
@@ -615,12 +642,12 @@ function TomorrowOutlookRow({
         ? 'text-rose-600'
         : 'text-slate-400'
   const trendLabel =
-    trend === 'improving' ? 'Improving' : trend === 'declining' ? 'Declining' : 'Stable'
+    trend === 'improving' ? t('veg.trend.improving') : trend === 'declining' ? t('veg.trend.declining') : t('veg.trend.stable')
 
   return (
     <div className="mt-4 flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
       <div className="shrink-0 text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Tomorrow</p>
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{t('veg.tomorrow')}</p>
         <p className="mt-0.5 text-xl font-semibold tabular-nums text-slate-800">{score}</p>
       </div>
       <div className="min-w-0 border-l border-slate-200 pl-3">
@@ -644,6 +671,7 @@ function FieldVisualization({
   score: number
   reducedMotion: boolean
 }) {
+  const { t } = useLanguage()
   const ground = groundColor(status)
   // Grass grows taller with the score; kept within a pleasant range.
   const grassScale = Math.max(0.12, Math.min(1, score / 100))
@@ -654,12 +682,20 @@ function FieldVisualization({
   // Five grass blades at fixed x positions, each scaled from the ground line.
   const blades = [40, 95, 160, 225, 280]
 
+  const getTranslatedStatus = (s: VegetationStatus) => {
+    if (s === 'parched') return t('veg.status.parched')
+    if (s === 'stressed') return t('veg.status.stressed')
+    if (s === 'saturated') return t('veg.status.saturated')
+    if (s === 'healthy') return t('veg.status.healthy')
+    return s
+  }
+
   return (
     <svg
       viewBox="0 0 320 150"
       className="h-auto w-full"
       role="img"
-      aria-label={`Illustration of field condition: ${status}, index ${score} of 100`}
+      aria-label={t('veg.sr.illustration', { status: getTranslatedStatus(status), score: score })}
       preserveAspectRatio="xMidYMid meet"
     >
       {/* Sky */}

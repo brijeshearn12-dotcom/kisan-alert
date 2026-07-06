@@ -10,6 +10,8 @@
  * -----------------------------------------------------------------------------
  */
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { getLanguageMeta, type LanguageCode } from '@/lib/i18n/translations'
+import { translateText, type TargetLang } from '@/lib/googleCloud'
 
 /** Shape returned to callers. `error` is only present on the fallback path. */
 export interface CropRecommendation {
@@ -72,6 +74,7 @@ function buildPrompt(
   season: string,
   viableCrops: string[],
   weatherSummary: WeatherSummary,
+  targetLangName: string,
 ): string {
   return [
     'Recommend the single best crop for a smallholder farmer based on the data below.',
@@ -87,20 +90,23 @@ function buildPrompt(
     viableCrops.map((crop) => `- ${crop}`).join('\n'),
     '',
     'Consider the soil type, district, season, and weather summary. Be conservative when uncertain.',
+    `You MUST respond and write all fields (reasoning, fertilization_tip, irrigation_advice) entirely in the ${targetLangName} language.`,
     'Respond with ONLY valid JSON (no markdown, no code fences, no commentary) in exactly this shape:',
-    '{"crop_name": "<one crop from the list>", "reasoning": "<2-3 simple sentences>", "confidence_score": <number between 0 and 1>, "fertilization_tip": "<one sentence>", "irrigation_advice": "<one sentence>"}',
+    `{"crop_name": "<one crop from the list>", "reasoning": "<2-3 simple sentences in ${targetLangName}>", "confidence_score": <number between 0 and 1>, "fertilization_tip": "<one sentence in ${targetLangName}>", "irrigation_advice": "<one sentence in ${targetLangName}>"}`,
     '',
     'fertilization_tip:',
     '- Exactly ONE sentence.',
     '- Practical and low-cost.',
     '- Recommend the simplest fertilizer action for the coming week.',
     '- Prefer fertilizers commonly available in India such as Urea or DAP when appropriate.',
+    `- Written in the ${targetLangName} language.`,
     '- Use plain language suitable for farmers.',
     '',
     'irrigation_advice:',
     '- Exactly ONE sentence.',
     '- Recommend irrigation based on crop stage and current weather conditions.',
     '- Keep the advice practical and easy to follow.',
+    `- Written in the ${targetLangName} language.`,
     '- Use simple farmer-friendly language.',
   ].join('\n')
 }
@@ -185,29 +191,43 @@ export async function getCropRecommendation(
   viableCrops: string[],
   weatherSummary: WeatherSummary,
   soilMoisture: number = 50,
+  targetLang: string = 'en',
 ): Promise<CropRecommendation> {
+  const langMeta = getLanguageMeta(targetLang as LanguageCode)
+  const targetLangName = langMeta ? langMeta.englishLabel : 'English'
+
   if (viableCrops.length === 0) {
     const fallback = buildFallback(viableCrops, 'No viable crops were supplied.')
+    let suffix = ""
     if (soilMoisture < 30) {
-      fallback.irrigation_advice += " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
+      suffix = " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
     } else if (soilMoisture <= 60) {
-      fallback.irrigation_advice += " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
+      suffix = " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
     } else {
-      fallback.irrigation_advice += " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
+      suffix = " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
     }
+    if (targetLang !== 'en') {
+      suffix = await translateText(suffix, targetLang as TargetLang)
+    }
+    fallback.irrigation_advice += suffix
     return fallback
   }
 
   const apiKey = process.env.GEMINI_API_KEY?.trim()
   if (!apiKey) {
     const fallback = buildFallback(viableCrops, 'GEMINI_API_KEY is not configured.')
+    let suffix = ""
     if (soilMoisture < 30) {
-      fallback.irrigation_advice += " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
+      suffix = " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
     } else if (soilMoisture <= 60) {
-      fallback.irrigation_advice += " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
+      suffix = " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
     } else {
-      fallback.irrigation_advice += " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
+      suffix = " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
     }
+    if (targetLang !== 'en') {
+      suffix = await translateText(suffix, targetLang as TargetLang)
+    }
+    fallback.irrigation_advice += suffix
     return fallback
   }
 
@@ -229,6 +249,7 @@ export async function getCropRecommendation(
       season,
       viableCrops,
       weatherSummary,
+      targetLangName,
     )
 
     // Guard against a hung request with our own timeout.
@@ -252,13 +273,18 @@ export async function getCropRecommendation(
         viableCrops,
         'Gemini returned a response that was not valid JSON.',
       )
+      let suffix = ""
       if (soilMoisture < 30) {
-        fallback.irrigation_advice += " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
+        suffix = " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
       } else if (soilMoisture <= 60) {
-        fallback.irrigation_advice += " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
+        suffix = " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
       } else {
-        fallback.irrigation_advice += " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
+        suffix = " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
       }
+      if (targetLang !== 'en') {
+        suffix = await translateText(suffix, targetLang as TargetLang)
+      }
+      fallback.irrigation_advice += suffix
       return fallback
     }
 
@@ -268,35 +294,50 @@ export async function getCropRecommendation(
         viableCrops,
         'Gemini returned a malformed or out-of-list recommendation.',
       )
+      let suffix = ""
       if (soilMoisture < 30) {
-        fallback.irrigation_advice += " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
+        suffix = " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
       } else if (soilMoisture <= 60) {
-        fallback.irrigation_advice += " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
+        suffix = " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
       } else {
-        fallback.irrigation_advice += " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
+        suffix = " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
       }
+      if (targetLang !== 'en') {
+        suffix = await translateText(suffix, targetLang as TargetLang)
+      }
+      fallback.irrigation_advice += suffix
       return fallback
     }
 
+    let suffix = ""
     if (soilMoisture < 30) {
-      normalized.irrigation_advice += " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
+      suffix = " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
     } else if (soilMoisture <= 60) {
-      normalized.irrigation_advice += " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
+      suffix = " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
     } else {
-      normalized.irrigation_advice += " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
+      suffix = " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
     }
+    if (targetLang !== 'en') {
+      suffix = await translateText(suffix, targetLang as TargetLang)
+    }
+    normalized.irrigation_advice += suffix
     return normalized
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Unknown Gemini error.'
     const fallback = buildFallback(viableCrops, message)
+    let suffix = ""
     if (soilMoisture < 30) {
-      fallback.irrigation_advice += " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
+      suffix = " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
     } else if (soilMoisture <= 60) {
-      fallback.irrigation_advice += " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
+      suffix = " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
     } else {
-      fallback.irrigation_advice += " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
+      suffix = " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
     }
+    if (targetLang !== 'en') {
+      suffix = await translateText(suffix, targetLang as TargetLang)
+    }
+    fallback.irrigation_advice += suffix
     return fallback
   }
 }
@@ -351,7 +392,7 @@ function buildVegetationFallback(ctx: VegetationContext): string {
 }
 
 /** Build the vegetation advisory prompt (plain-text answer, not JSON). */
-function buildVegetationPrompt(ctx: VegetationContext): string {
+function buildVegetationPrompt(ctx: VegetationContext, targetLangName: string): string {
   return [
     "Describe today's vegetation and soil-moisture condition for this field.",
     '',
@@ -362,10 +403,11 @@ function buildVegetationPrompt(ctx: VegetationContext): string {
     `Computed vegetation index: ${ctx.score}/100 (${ctx.status})`,
     '',
     'Rules for your answer:',
-    '- Explain the condition in ONE simple sentence for a farmer.',
+    `- Explain the condition in ONE simple sentence for a farmer written entirely in the ${targetLangName} language.`,
     '- Mention the single biggest contributing factor.',
     '- Avoid technical language and jargon.',
     '- Keep it under 25 words.',
+    `- Reply entirely in the ${targetLangName} language.`,
     '- Reply with the sentence only — no preamble, labels, or quotation marks.',
   ].join('\n')
 }
@@ -379,12 +421,19 @@ function buildVegetationPrompt(ctx: VegetationContext): string {
  */
 export async function getVegetationAdvice(
   ctx: VegetationContext,
+  targetLang: string = 'en',
 ): Promise<VegetationAdvice> {
+  const langMeta = getLanguageMeta(targetLang as LanguageCode)
+  const targetLangName = langMeta ? langMeta.englishLabel : 'English'
   const fallback = buildVegetationFallback(ctx)
 
   const apiKey = process.env.GEMINI_API_KEY?.trim()
   if (!apiKey) {
-    return { advice: fallback, error: 'GEMINI_API_KEY is not configured.' }
+    let finalFallback = fallback
+    if (targetLang !== 'en') {
+      finalFallback = await translateText(fallback, targetLang as TargetLang)
+    }
+    return { advice: finalFallback, error: 'GEMINI_API_KEY is not configured.' }
   }
 
   try {
@@ -396,7 +445,7 @@ export async function getVegetationAdvice(
     })
 
     const result = await Promise.race([
-      model.generateContent(buildVegetationPrompt(ctx)),
+      model.generateContent(buildVegetationPrompt(ctx, targetLangName)),
       new Promise<never>((_, reject) =>
         setTimeout(
           () => reject(new Error('Gemini request timed out.')),
@@ -406,13 +455,23 @@ export async function getVegetationAdvice(
     ])
 
     const text = result.response.text().trim().replace(/^["']|["']$/g, '')
-    if (!text) return { advice: fallback, error: 'Gemini returned an empty response.' }
+    if (!text) {
+      let finalFallback = fallback
+      if (targetLang !== 'en') {
+        finalFallback = await translateText(fallback, targetLang as TargetLang)
+      }
+      return { advice: finalFallback, error: 'Gemini returned an empty response.' }
+    }
 
     return { advice: text }
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Unknown Gemini error.'
-    return { advice: fallback, error: message }
+    let finalFallback = fallback
+    if (targetLang !== 'en') {
+      finalFallback = await translateText(fallback, targetLang as TargetLang)
+    }
+    return { advice: finalFallback, error: message }
   }
 }
 
@@ -484,7 +543,7 @@ async function fetchImageAsInlineData(imageUrl: string): Promise<InlineImage | n
 }
 
 /** Build the diagnosis prompt, embedding the crop hint and the strict rules. */
-function buildDiagnosisPrompt(cropType?: string): string {
+function buildDiagnosisPrompt(cropType?: string, targetLangName: string = 'English'): string {
   const cropLine =
     cropType && cropType.trim() !== ''
       ? `The crop in the image is: ${cropType.trim()}.`
@@ -502,8 +561,9 @@ function buildDiagnosisPrompt(cropType?: string): string {
     '- multiple diseases are plausible',
     '- you cannot confidently distinguish between conditions.',
     '',
+    `You MUST respond and write all text fields (diagnosis, treatment_advice) entirely in the ${targetLangName} language.`,
     'Respond with ONLY valid JSON (no markdown, no code fences, no commentary) in exactly this shape:',
-    '{"diagnosis": "<disease name or condition>", "confidence_score": <number between 0 and 1>, "treatment_advice": "<2-3 simple sentences using practical, locally available remedies>"}',
+    `{"diagnosis": "<disease name or condition in ${targetLangName}>", "confidence_score": <number between 0 and 1>, "treatment_advice": "<2-3 simple sentences in ${targetLangName} using practical, locally available remedies>"}`,
   ].join('\n')
 }
 
@@ -544,10 +604,14 @@ function normalizeDiagnosisOutput(parsed: unknown): DiseaseDiagnosis | null {
 export async function getDiseaseDiagnosis(
   imageUrl: string,
   cropType?: string,
+  targetLang: string = 'en',
 ): Promise<DiseaseDiagnosis> {
   const apiKey = process.env.GEMINI_API_KEY?.trim()
   if (!apiKey) return DIAGNOSIS_FALLBACK
   console.log(`apiKey loaded: length=${apiKey.length}, startsWith=${apiKey.slice(0, 10)}`)
+
+  const langMeta = getLanguageMeta(targetLang as LanguageCode)
+  const targetLangName = langMeta ? langMeta.englishLabel : 'English'
 
   try {
     const image = await fetchImageAsInlineData(imageUrl)
@@ -570,7 +634,7 @@ export async function getDiseaseDiagnosis(
       try {
         const result = await Promise.race([
           model.generateContent([
-            buildDiagnosisPrompt(cropType),
+            buildDiagnosisPrompt(cropType, targetLangName),
             { inlineData: { data: image.data, mimeType: image.mimeType } },
           ]),
           new Promise<never>((_, reject) =>
@@ -633,7 +697,7 @@ const TEXT_DIAGNOSIS_SYSTEM_INSTRUCTION =
 /**
  * Build the prompt for a text-only diagnosis from a farmer's description.
  */
-function buildTextDiagnosisPrompt(description: string): string {
+function buildTextDiagnosisPrompt(description: string, targetLangName: string = 'English'): string {
   return [
     'A farmer described their crop issue (transcribed from speech — minor errors possible):',
     '',
@@ -646,8 +710,9 @@ function buildTextDiagnosisPrompt(description: string): string {
     '- multiple diseases are plausible',
     '- key details (crop type, duration, spread) are missing.',
     '',
+    `You MUST respond and write all text fields (diagnosis, treatment_advice) entirely in the ${targetLangName} language.`,
     'Respond with ONLY valid JSON (no markdown, no code fences, no commentary) in exactly this shape:',
-    '{"diagnosis": "<disease name or condition>", "confidence_score": <number between 0 and 1>, "treatment_advice": "<2-3 sentences, use locally available remedies like neem, urea, fungicide etc.>"}',
+    `{"diagnosis": "<disease name or condition in ${targetLangName}>", "confidence_score": <number between 0 and 1>, "treatment_advice": "<2-3 sentences in ${targetLangName}, use locally available remedies like neem, urea, fungicide etc.>" }`,
   ].join('\n')
 }
 
@@ -659,6 +724,7 @@ function buildTextDiagnosisPrompt(description: string): string {
  */
 export async function getDiseaseDiagnosisFromText(
   description: string,
+  targetLang: string = 'en',
 ): Promise<DiseaseDiagnosis> {
   if (!description.trim()) {
     return {
@@ -671,6 +737,9 @@ export async function getDiseaseDiagnosisFromText(
   const apiKey = process.env.GEMINI_API_KEY?.trim()
   if (!apiKey) return DIAGNOSIS_FALLBACK
 
+  const langMeta = getLanguageMeta(targetLang as LanguageCode)
+  const targetLangName = langMeta ? langMeta.englishLabel : 'English'
+
   try {
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({
@@ -682,7 +751,7 @@ export async function getDiseaseDiagnosisFromText(
       },
     })
 
-    const prompt = buildTextDiagnosisPrompt(description)
+    const prompt = buildTextDiagnosisPrompt(description, targetLangName)
 
     const result = await Promise.race([
       model.generateContent(prompt),

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 /**
  * PhotoUpload
@@ -198,6 +199,8 @@ export default function PhotoUpload({
   label = 'Photo',
   className = '',
 }: PhotoUploadProps) {
+  const { t } = useLanguage()
+
   const [status, setStatus] = useState<Status>('idle')
   const [progress, setProgress] = useState(0)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -236,8 +239,8 @@ export default function PhotoUpload({
         if (!signatureRes.ok) {
           throw new Error(
             signatureRes.status === 401
-              ? 'Please sign in to upload a photo.'
-              : 'Could not authorize the upload. Please try again.',
+              ? t('upload.signInToUpload')
+              : t('upload.authError'),
           )
         }
         const signature = (await signatureRes.json()) as SignatureResponse
@@ -249,13 +252,13 @@ export default function PhotoUpload({
         onUpload(secureUrl)
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : 'Something went wrong.'
+          error instanceof Error ? error.message : t('upload.genericError')
         setStatus('error')
         setErrorMessage(message)
         onError?.(message)
       }
     },
-    [maxDimension, quality, setPreview, onUpload, onError],
+    [maxDimension, quality, setPreview, onUpload, onError, t],
   )
 
   const onInputChange = useCallback(
@@ -317,8 +320,8 @@ export default function PhotoUpload({
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center gap-1 px-6 text-center">
               <span className="text-slate-300">{GalleryIcon}</span>
-              <p className="mt-1 text-sm font-medium text-slate-500">No photo selected</p>
-              <p className="text-xs text-slate-400">Take a photo or choose one from your gallery</p>
+              <p className="mt-1 text-sm font-medium text-slate-500">{t('upload.noPhoto')}</p>
+              <p className="text-xs text-slate-400">{t('upload.prompt')}</p>
             </div>
           )}
 
@@ -327,7 +330,7 @@ export default function PhotoUpload({
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/80 backdrop-blur-[2px]">
               <div className="w-40">
                 <div className="mb-1.5 flex items-center justify-between text-[11px] font-medium text-slate-500">
-                  <span>{status === 'preparing' ? 'Preparing…' : 'Uploading…'}</span>
+                  <span>{status === 'preparing' ? t('upload.preparing') : t('upload.uploading')}</span>
                   {status === 'uploading' && <span className="tabular-nums">{progress}%</span>}
                 </div>
                 <div
@@ -353,7 +356,7 @@ export default function PhotoUpload({
           {status === 'success' && (
             <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white shadow-sm animate-fade-in-up">
               {CheckIcon}
-              Uploaded
+              {t('upload.success')}
             </div>
           )}
         </div>
@@ -367,7 +370,7 @@ export default function PhotoUpload({
               className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
             >
               {RefreshIcon}
-              Replace photo
+              {t('upload.replace')}
             </button>
           ) : (
             <>
@@ -378,7 +381,7 @@ export default function PhotoUpload({
                 className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 text-sm font-medium text-white shadow-sm transition-colors hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
               >
                 {CameraIcon}
-                Camera
+                {t('upload.camera')}
               </button>
               <button
                 type="button"
@@ -387,7 +390,7 @@ export default function PhotoUpload({
                 className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 disabled:cursor-not-allowed disabled:text-slate-400"
               >
                 {GalleryIcon}
-                Gallery
+                {t('upload.gallery')}
               </button>
             </>
           )}
@@ -408,7 +411,7 @@ export default function PhotoUpload({
               onClick={reset}
               className="mt-1 text-xs font-medium text-rose-600 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40 rounded"
             >
-              Try again
+              {t('upload.tryAgain')}
             </button>
           </div>
         </div>
@@ -416,9 +419,9 @@ export default function PhotoUpload({
 
       {/* Screen-reader status announcements */}
       <p id={statusId} className="sr-only" role="status" aria-live="polite">
-        {status === 'preparing' && 'Preparing photo for upload'}
-        {status === 'uploading' && `Uploading, ${progress} percent complete`}
-        {status === 'success' && 'Photo uploaded successfully'}
+        {status === 'preparing' && t('upload.sr.preparing')}
+        {status === 'uploading' && t('upload.sr.uploading', { percent: progress })}
+        {status === 'success' && t('upload.sr.success')}
         {status === 'error' && errorMessage}
       </p>
     </div>

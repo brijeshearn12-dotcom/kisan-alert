@@ -9,6 +9,8 @@ import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { confidenceStyle } from '@/lib/confidence'
 import { TopNav, SiteFooter } from '@/app/dashboard/ui'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { getCropTranslationKey, getLanguageMeta } from '@/lib/i18n/translations'
 
 interface TimelineItem {
   id: string
@@ -48,6 +50,7 @@ const CheckCircleIcon = (
 export default function HistoryPage() {
   const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
+  const { t, language } = useLanguage()
 
   const [status, setStatus] = useState<Status>('loading')
   const [timeline, setTimeline] = useState<TimelineItem[]>([])
@@ -99,7 +102,7 @@ export default function HistoryPage() {
         const result = await response.json()
         setTimeline(result.timeline || [])
         setStatus('success')
-      } catch (err) {
+      } catch {
         if (active) {
           setStatus('error')
         }
@@ -132,9 +135,9 @@ export default function HistoryPage() {
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-5 py-8 sm:px-6 sm:py-12">
         <header className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Activity History</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{t('history.title')}</h1>
           <p className="mt-2 text-sm text-slate-500">
-            A comprehensive record of your farm&apos;s crop recommendations and leaf disease checks.
+            {t('history.subtitle')}
           </p>
         </header>
 
@@ -151,8 +154,8 @@ export default function HistoryPage() {
 
         {status === 'error' && (
           <ErrorState
-            title="Could not load history"
-            description="We encountered an issue retrieving your timeline logs. Please try again."
+            title={t('history.loadFailed')}
+            description={t('history.loadFailedDetail')}
             onRetry={() => setReloadKey((k) => k + 1)}
           />
         )}
@@ -160,14 +163,14 @@ export default function HistoryPage() {
         {status === 'success' && timeline.length === 0 && (
           <EmptyState
             icon={SproutIcon}
-            title="No activity yet"
-            description="You haven't requested any crop recommendations or completed plant leaf diagnoses yet."
+            title={t('history.noActivity')}
+            description={t('history.noActivityDetail')}
             action={
               <Link
                 href="/recommendation"
                 className="inline-flex h-10 items-center justify-center rounded-lg bg-primary-green px-5 text-sm font-semibold text-white shadow-sm hover:bg-primary-green/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 focus-visible:ring-offset-2"
               >
-                Get Started
+                {t('history.getStarted')}
               </Link>
             }
           />
@@ -201,17 +204,21 @@ export default function HistoryPage() {
                               {item.type === 'recommendation' ? (
                                 <>
                                   <span className="text-primary-green">{SproutIcon}</span>
-                                  <span>Recommendation</span>
+                                  <span>{t('history.recommendation')}</span>
                                 </>
                               ) : (
                                 <>
                                   <span className="text-accent-amber">{CheckCircleIcon}</span>
-                                  <span>Disease Check</span>
+                                  <span>{t('history.diseaseCheck')}</span>
                                 </>
                               )}
                             </span>
                             <h2 className="mt-1 text-lg font-bold text-slate-900">
-                              {item.title}
+                              {item.type === 'recommendation'
+                                ? (item.title === 'Crop Recommendation'
+                                    ? t('recommendation.title')
+                                    : t(getCropTranslationKey(item.title)))
+                                : item.title}
                             </h2>
                           </div>
 
@@ -231,7 +238,7 @@ export default function HistoryPage() {
 
                         <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-[11px] font-medium text-slate-400">
                           <span>
-                            {new Date(item.created_at).toLocaleString(undefined, {
+                            {new Date(item.created_at).toLocaleString(getLanguageMeta(language).locale, {
                               dateStyle: 'medium',
                               timeStyle: 'short',
                             })}

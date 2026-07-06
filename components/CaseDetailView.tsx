@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { getLanguageMeta } from '@/lib/i18n/translations'
 
 interface FarmerProfile {
   id: string
@@ -62,6 +64,7 @@ const ClockIcon = (
 
 export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
   const router = useRouter()
+  const { t, language } = useLanguage()
   const [caseRecord, setCaseRecord] = useState<CaseRecord>(initialCase)
   const [notes, setNotes] = useState(initialCase.expert_notes || '')
   const [submitting, setSubmitting] = useState(false)
@@ -95,7 +98,7 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error ?? 'Failed to update case.')
+        throw new Error(data.error ?? t('expert.updateFailed'))
       }
 
       setCaseRecord((prev) => ({
@@ -107,7 +110,7 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
 
       router.refresh()
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to resolve the case.')
+      setErrorMsg(err instanceof Error ? err.message : t('expert.resolveFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -121,7 +124,7 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
         className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 rounded px-1 py-0.5"
       >
         {ArrowLeftIcon}
-        <span>Back to Escalated Cases</span>
+        <span>{t('expert.backToCases')}</span>
       </Link>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -134,7 +137,7 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={check.image_url}
-                  alt="Escalated plant leaf diagnosis"
+                  alt={`Crop diagnosed as ${check.diagnosis}`}
                   className="h-full w-full object-cover"
                   onError={() => setImageError(true)}
                 />
@@ -145,9 +148,9 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
                     <circle cx="8.5" cy="8.5" r="1.5" />
                     <path d="m21 15-5-5L5 21" />
                   </svg>
-                  <span className="text-sm font-medium">Image unavailable or load failed</span>
+                  <span className="text-sm font-medium">{t('expert.imageUnavailable')}</span>
                   <span className="text-xs text-slate-500 max-w-xs">
-                    This scan was either submitted with a broken link or the asset was deleted from Cloudinary.
+                    {t('expert.imageUnavailableDetail')}
                   </span>
                 </div>
               )}
@@ -160,36 +163,36 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
                     : 'bg-primary-green/10 text-primary-green ring-1 ring-primary-green/20'
                 }`}>
                   {isPending ? ClockIcon : CheckCircleIcon}
-                  <span>{isPending ? 'Pending' : 'Resolved'}</span>
+                  <span>{isPending ? t('expert.status.pending') : t('expert.status.resolved')}</span>
                 </span>
               </div>
             </div>
 
             {/* Analysis details */}
             <div className="p-5 sm:p-6">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Automated Scan Diagnosis</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{t('disease.label')}</span>
               <h2 className="text-xl font-bold text-slate-900 mt-1">
-                {check?.diagnosis || 'Unknown Diagnosis'}
+                {check?.diagnosis || t('expert.unknownDisease')}
               </h2>
 
               <div className="mt-4 flex flex-wrap gap-4 text-xs text-slate-500">
                 <div>
-                  Farmer: <span className="font-semibold text-slate-700">{farmer?.name || 'Anonymous Farmer'}</span>
+                  {t('expert.farmer', { name: farmer?.name || t('expert.anonymousFarmer') })}
                 </div>
                 <div>•</div>
                 <div>
-                  Confidence Score: <span className="font-semibold text-slate-700">{check?.confidence_score !== undefined ? `${(check.confidence_score * 100).toFixed(0)}%` : 'N/A'}</span>
+                  {t('recommendation.result.confidence')}: <span className="font-semibold text-slate-700">{check?.confidence_score !== undefined ? `${(check.confidence_score * 100).toFixed(0)}%` : 'N/A'}</span>
                 </div>
                 <div>•</div>
                 <div>
-                  Escalated on: <span className="font-semibold text-slate-700">{new Date(caseRecord.created_at).toLocaleString()}</span>
+                  {t('expert.submittedOn', { date: new Date(caseRecord.created_at).toLocaleString(getLanguageMeta(language).locale, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }) })}
                 </div>
               </div>
 
               <div className="mt-6 border-t border-slate-100 pt-6">
-                <h3 className="text-sm font-semibold text-slate-800">AI Recommendation Feedback</h3>
+                <h3 className="text-sm font-semibold text-slate-800">{t('expert.aiTreatment')}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-slate-600 whitespace-pre-line">
-                  {check?.treatment_advice || 'No recommendations recorded.'}
+                  {check?.treatment_advice || t('expert.noTreatment')}
                 </p>
               </div>
             </div>
@@ -199,15 +202,15 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
         {/* Right column: Action form */}
         <div className="space-y-6">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
-            <h3 className="text-base font-bold text-slate-900">Rythu Seva Kendra Action Panel</h3>
+            <h3 className="text-base font-bold text-slate-900">{t('expert.rskActionPanel')}</h3>
             <p className="mt-1.5 text-xs text-slate-500">
-              Provide feedback and mark this case as verified or resolved. Farmers will see your notes immediately on their dashboard.
+              {t('expert.rskActionPanelDetail')}
             </p>
 
             <div className="mt-6 space-y-4">
               <div>
                 <label htmlFor="notes" className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Resolution Notes / Treatment
+                  {t('expert.resolutionNotesLabel')}
                 </label>
                 <textarea
                   id="notes"
@@ -215,7 +218,7 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   disabled={!isPending || submitting}
-                  placeholder="Enter specific diagnosis verification notes, custom treatment advice, or chemical/biological countermeasures for the farmer."
+                  placeholder={t('expert.resolutionNotesPlaceholder')}
                   className="w-full rounded-lg border border-slate-200 p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary-green focus:outline-none focus:ring-1 focus:ring-primary-green/20 disabled:bg-slate-50 disabled:text-slate-500"
                 />
               </div>
@@ -233,15 +236,15 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
                   disabled={submitting}
                   className="flex w-full h-10 items-center justify-center rounded-xl bg-primary-green text-sm font-semibold text-white shadow-sm hover:bg-primary-green/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 disabled:bg-slate-200 disabled:text-slate-400"
                 >
-                  {submitting ? 'Resolving Case...' : 'Verify & Resolve'}
+                  {submitting ? t('expert.resolvingCase') : t('expert.verifyResolveBtn')}
                 </button>
               ) : (
                 <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 text-center">
                   <div className="mx-auto block text-primary-green w-fit">{CheckCircleIcon}</div>
-                  <h4 className="mt-2 text-sm font-bold text-slate-950">Resolved</h4>
+                  <h4 className="mt-2 text-sm font-bold text-slate-950">{t('expert.status.resolved')}</h4>
                   {caseRecord.resolved_at && (
                     <p className="text-[11px] text-slate-400 mt-0.5">
-                      On {new Date(caseRecord.resolved_at).toLocaleString()}
+                      {t('expert.resolvedOn', { date: new Date(caseRecord.resolved_at).toLocaleString(getLanguageMeta(language).locale, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }) })}
                     </p>
                   )}
                 </div>

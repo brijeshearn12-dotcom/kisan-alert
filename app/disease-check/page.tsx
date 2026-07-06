@@ -10,6 +10,9 @@ import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { ListenButton } from '@/components/ListenButton'
 import { VoiceInput } from '@/components/VoiceInput'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { toSpeechLocale } from '@/lib/i18n/speech'
+import { type TranslationKey } from '@/lib/i18n/translations'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -73,7 +76,7 @@ const RefreshIcon = (
 
 // ── Confidence styling ───────────────────────────────────────────────────────
 
-function confidenceStyle(score: number): {
+function confidenceStyle(score: number, t: (key: TranslationKey) => string): {
   label: string
   text: string
   bg: string
@@ -82,7 +85,7 @@ function confidenceStyle(score: number): {
 } {
   if (score >= 0.8) {
     return {
-      label: 'High confidence',
+      label: t('disease.confidence.high'),
       text: 'text-primary-green font-medium',
       bg: 'bg-primary-green/5',
       ring: 'ring-primary-green/20',
@@ -91,7 +94,7 @@ function confidenceStyle(score: number): {
   }
   if (score >= 0.6) {
     return {
-      label: 'Moderate confidence',
+      label: t('disease.confidence.moderate'),
       text: 'text-accent-amber font-medium',
       bg: 'bg-accent-amber/5',
       ring: 'ring-accent-amber/20',
@@ -99,7 +102,7 @@ function confidenceStyle(score: number): {
     }
   }
   return {
-    label: 'Low confidence',
+    label: t('disease.confidence.low'),
     text: 'text-rose-700 font-medium',
     bg: 'bg-rose-50',
     ring: 'ring-rose-600/10',
@@ -112,6 +115,7 @@ function confidenceStyle(score: number): {
 export default function DiseaseCheckPage() {
   const supabase = useMemo(() => createClient(), [])
   const statusId = useId()
+  const { t, language } = useLanguage()
 
   const [screenState, setScreenState] = useState<ScreenState>('loading')
   const [imageUrl, setImageUrl] = useState<string | null>(null)
@@ -120,7 +124,7 @@ export default function DiseaseCheckPage() {
   const [voiceDescription, setVoiceDescription] = useState<string>('')
 
   // Status message rotation during the analysis phase
-  const [analysisStatus, setAnalysisStatus] = useState('Uploading image...')
+  const [analysisStatusKey, setAnalysisStatusKey] = useState<TranslationKey>('disease.status.uploading')
 
   // Verification & Auth check on mount
   useEffect(() => {
@@ -150,17 +154,17 @@ export default function DiseaseCheckPage() {
   useEffect(() => {
     if (screenState !== 'analyzing') return
 
-    const messages = [
-      'Sending crop snapshot to AI pipeline...',
-      'AI is identifying plant symptoms...',
-      'Cross-referencing disease patterns...',
-      'Calculating diagnosis confidence...',
+    const messages: TranslationKey[] = [
+      'disease.status.sending',
+      'disease.status.identifying',
+      'disease.status.referencing',
+      'disease.status.calculating',
     ]
 
     let index = 0
     const interval = setInterval(() => {
       if (index < messages.length) {
-        setAnalysisStatus(messages[index])
+        setAnalysisStatusKey(messages[index])
         index++
       }
     }, 2200)
@@ -171,14 +175,14 @@ export default function DiseaseCheckPage() {
   async function handleCheck(uploadedUrl: string) {
     setImageUrl(uploadedUrl)
     setScreenState('analyzing')
-    setAnalysisStatus('Sending crop snapshot to AI pipeline...')
+    setAnalysisStatusKey('disease.status.sending')
     setErrorMsg(null)
 
     try {
       const response = await fetch('/api/disease-checks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_url: uploadedUrl }),
+        body: JSON.stringify({ image_url: uploadedUrl, target_lang: language }),
       })
 
       const data = (await response.json()) as DiseaseCheckResponse
@@ -214,14 +218,14 @@ export default function DiseaseCheckPage() {
     if (!voiceDescription.trim()) return
 
     setScreenState('analyzing')
-    setAnalysisStatus('Analyzing your description with AI...')
+    setAnalysisStatusKey('disease.status.analyzingDesc')
     setErrorMsg(null)
 
     try {
       const response = await fetch('/api/disease-checks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voice_description: voiceDescription }),
+        body: JSON.stringify({ voice_description: voiceDescription, target_lang: language }),
       })
 
       const data = (await response.json()) as DiseaseCheckResponse
@@ -250,16 +254,16 @@ export default function DiseaseCheckPage() {
       <nav className="border-b border-slate-100 bg-white shadow-sm" aria-label="Global breadcrumb">
         <div className="mx-auto flex h-14 w-full max-w-2xl items-center gap-2 px-5 sm:px-6">
           <Link
-            href="/login"
+            href="/dashboard"
             className="flex items-center gap-1.5 text-xs text-slate-500 transition-colors hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 rounded px-1.5 py-1"
           >
             {ArrowLeftIcon}
-            <span>Back</span>
+            <span>{t('disease.back')}</span>
           </Link>
           <span className="text-slate-200" aria-hidden="true">/</span>
           <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
             <span className="text-primary-green">{LeafIcon}</span>
-            Disease Diagnosis
+            {t('disease.diagnosisHeader')}
           </span>
         </div>
       </nav>
@@ -268,10 +272,10 @@ export default function DiseaseCheckPage() {
         {/* Header Block */}
         <header className="mb-8">
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            AI Disease Diagnosis
+            {t('disease.aiDiagnosisTitle')}
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-slate-500">
-            Upload a photo of your affected plant leaf, or describe the symptoms using your voice, to receive an instant diagnosis, treatment details, and Rythu Seva Kendra review.
+            {t('disease.aiDiagnosisDetail')}
           </p>
         </header>
 
@@ -298,14 +302,14 @@ export default function DiseaseCheckPage() {
               exit={{ opacity: 0 }}
             >
               <EmptyState
-                title="Sign in required"
-                description="You must be logged in to access the disease diagnosis tool and submit crop scans for review."
+                title={t('disease.authRequired')}
+                description={t('disease.authRequiredDetail')}
                 action={
                   <Link
                     href="/login"
                     className="inline-flex h-10 items-center justify-center rounded-lg bg-primary-green px-4 text-sm font-semibold text-white shadow-sm hover:bg-primary-green/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
                   >
-                    Sign in
+                    {t('login.signIn')}
                   </Link>
                 }
               />
@@ -319,7 +323,7 @@ export default function DiseaseCheckPage() {
               exit={{ opacity: 0 }}
             >
               <PhotoUpload
-                label="Step 1: Upload leaf photograph"
+                label={t('disease.uploadStep1')}
                 onUpload={handleCheck}
                 onError={(msg) => {
                   setErrorMsg(msg)
@@ -336,7 +340,7 @@ export default function DiseaseCheckPage() {
                     </div>
                     <div className="relative flex justify-center">
                       <span className="bg-slate-50 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                        Or describe the problem
+                        {t('disease.describeOr')}
                       </span>
                     </div>
                   </div>
@@ -353,7 +357,7 @@ export default function DiseaseCheckPage() {
                         <path d="m22 2-7 20-4-9-9-4z" />
                         <path d="M22 2 11 13" />
                       </svg>
-                      Diagnose from Description
+                      {t('disease.diagnoseBtn')}
                     </button>
                   )}
                 </>
@@ -400,10 +404,10 @@ export default function DiseaseCheckPage() {
                     </span>
                   </div>
                   <h3 className="mt-4 text-sm font-semibold text-white tracking-wide">
-                    ANALYZING SNAPSHOT
+                    {t('disease.analyzingSnapshot')}
                   </h3>
                   <p className="mt-1 text-xs text-primary-green/80 font-mono tracking-wide animate-pulse">
-                    {analysisStatus}
+                    {t(analysisStatusKey)}
                   </p>
                 </div>
               </div>
@@ -428,7 +432,7 @@ export default function DiseaseCheckPage() {
                     />
                     <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-primary-green px-3 py-1 text-xs font-semibold text-white shadow-sm">
                       {CheckIcon}
-                      Analysis Completed
+                      {t('disease.analysisCompleted')}
                     </div>
                   </div>
                 )}
@@ -443,7 +447,7 @@ export default function DiseaseCheckPage() {
                           <line x1="12" x2="12" y1="19" y2="22" />
                         </svg>
                       </span>
-                      <span className="text-xs font-semibold text-primary-green uppercase tracking-wider">Voice Diagnosis</span>
+                      <span className="text-xs font-semibold text-primary-green uppercase tracking-wider">{t('disease.voiceDiagnosis')}</span>
                     </div>
                     <p className="mt-2 text-xs italic text-slate-500 line-clamp-2">&ldquo;{voiceDescription}&rdquo;</p>
                   </div>
@@ -453,7 +457,7 @@ export default function DiseaseCheckPage() {
                   {/* Title and Badge */}
                   <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Diagnosis</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{t('disease.label')}</span>
                       <h2 className="text-xl font-bold text-slate-900 mt-0.5">
                         {diagnosisResult.diagnosis}
                       </h2>
@@ -461,11 +465,11 @@ export default function DiseaseCheckPage() {
 
                     {diagnosisResult.confidence_score !== undefined && (
                       (() => {
-                        const style = confidenceStyle(diagnosisResult.confidence_score)
+                        const style = confidenceStyle(diagnosisResult.confidence_score, t)
                         return (
                           <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs ${style.text} ${style.bg} ring-1 ring-inset ${style.ring} self-start sm:self-center`}>
                             <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
-                            <span>{(diagnosisResult.confidence_score * 100).toFixed(0)}% Confidence</span>
+                            <span>{t('disease.confidencePercent', { percent: (diagnosisResult.confidence_score * 100).toFixed(0) })}</span>
                           </div>
                         )
                       })()
@@ -474,14 +478,14 @@ export default function DiseaseCheckPage() {
 
                   {/* Recommendation Details */}
                   <div className="mt-6 border-t border-slate-100 pt-6">
-                    <h3 className="text-sm font-semibold text-slate-800">Recommended Treatment</h3>
+                    <h3 className="text-sm font-semibold text-slate-800">{t('disease.recommendedTreatment')}</h3>
                     <p className="mt-2 text-sm leading-relaxed text-slate-600 whitespace-pre-line">
                       {diagnosisResult.treatment_advice}
                     </p>
                     {diagnosisResult.treatment_advice && (
                       <ListenButton
                         text={diagnosisResult.treatment_advice}
-                        languageCode="en-IN"
+                        languageCode={toSpeechLocale(language)}
                       />
                     )}
                   </div>
@@ -495,7 +499,7 @@ export default function DiseaseCheckPage() {
                 className="flex w-full h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
               >
                 {RefreshIcon}
-                Scan another leaf
+                {t('disease.scanAnother')}
               </button>
             </EntranceAnimation>
           )}
@@ -518,7 +522,7 @@ export default function DiseaseCheckPage() {
                     />
                     <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-accent-amber px-3 py-1 text-xs font-semibold text-white shadow-sm">
                       {ShieldAlertIcon}
-                      Case Submitted
+                      {t('disease.caseSubmitted')}
                     </div>
                   </div>
                 )}
@@ -529,7 +533,7 @@ export default function DiseaseCheckPage() {
                       <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-amber/10 text-accent-amber">
                         {ShieldAlertIcon}
                       </span>
-                      <span className="text-xs font-semibold text-accent-amber uppercase tracking-wider">Voice Diagnosis — Case Submitted</span>
+                      <span className="text-xs font-semibold text-accent-amber uppercase tracking-wider">{t('disease.voiceCaseSubmitted')}</span>
                     </div>
                     <p className="mt-2 text-xs italic text-slate-500 line-clamp-2">&ldquo;{voiceDescription}&rdquo;</p>
                   </div>
@@ -537,30 +541,32 @@ export default function DiseaseCheckPage() {
 
                 <div className="p-5 sm:p-6">
                   <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Resolution Flow</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{t('disease.resolutionFlow')}</span>
                     <h2 className="text-xl font-bold text-slate-900 mt-0.5">
-                      Forwarded to Rythu Seva Kendra
+                      {t('disease.rskForwarded')}
                     </h2>
                   </div>
 
                   <p className="mt-4 text-sm leading-relaxed text-slate-600">
-                    The AI confidence score for this scan was low ({(diagnosisResult.confidence_score * 100).toFixed(0)}%). To ensure you receive accurate guidance, we have escalated this case to our RSK verification panel.
+                    {t('disease.rskExplanation', { percent: (diagnosisResult.confidence_score * 100).toFixed(0) })}
                   </p>
 
                   <div className="mt-6 border-t border-slate-100 pt-6 space-y-4">
                     <div className="flex gap-3">
                       <div className="text-slate-400 shrink-0 mt-0.5">{CheckIcon}</div>
                       <div>
-                        <h4 className="text-sm font-semibold text-slate-800">Case Created</h4>
-                        <p className="text-xs text-slate-500 mt-0.5">Reference ID: {diagnosisResult.case_id || 'Pending assignment'}</p>
+                        <h4 className="text-sm font-semibold text-slate-800">{t('disease.caseCreated')}</h4>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {diagnosisResult.case_id ? t('disease.referenceId', { id: diagnosisResult.case_id }) : t('disease.pendingAssignment')}
+                        </p>
                       </div>
                     </div>
 
                     <div className="flex gap-3">
                       <div className="text-slate-400 shrink-0 mt-0.5">{CheckIcon}</div>
                       <div>
-                        <h4 className="text-sm font-semibold text-slate-800">Review SLA</h4>
-                        <p className="text-xs text-slate-500 mt-0.5">An agricultural extension officer will review and update your dashboard within 24 hours.</p>
+                        <h4 className="text-sm font-semibold text-slate-800">{t('disease.reviewSla')}</h4>
+                        <p className="text-xs text-slate-500 mt-0.5">{t('disease.reviewSlaDetail')}</p>
                       </div>
                     </div>
                   </div>
@@ -574,7 +580,7 @@ export default function DiseaseCheckPage() {
                 className="flex w-full h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
               >
                 {RefreshIcon}
-                Scan another leaf
+                {t('disease.scanAnother')}
               </button>
             </EntranceAnimation>
           )}
@@ -586,16 +592,16 @@ export default function DiseaseCheckPage() {
               exit={{ opacity: 0 }}
             >
               <ErrorState
-                title="Diagnosis Failed"
+                title={t('disease.failed')}
                 description={errorMsg}
                 onRetry={handleReset}
                 retryText="Try Again"
                 secondaryAction={
                   <Link
-                    href="/login"
+                    href="/dashboard"
                     className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/40"
                   >
-                    Return to Dashboard
+                    {t('disease.returnDashboard')}
                   </Link>
                 }
               />
@@ -606,11 +612,11 @@ export default function DiseaseCheckPage() {
 
       {/* Screen reader live updates */}
       <p id={statusId} className="sr-only" role="status" aria-live="polite">
-        {screenState === 'loading' && 'Checking authentication status'}
-        {screenState === 'analyzing' && analysisStatus}
-        {screenState === 'success' && `Analysis complete. Diagnosed as ${diagnosisResult?.diagnosis}`}
-        {screenState === 'escalated' && 'Diagnosis complete. Case escalated for Rythu Seva Kendra review.'}
-        {screenState === 'error' && `Analysis failed: ${errorMsg}`}
+        {screenState === 'loading' && t('disease.sr.checkingAuth')}
+        {screenState === 'analyzing' && t(analysisStatusKey)}
+        {screenState === 'success' && t('disease.sr.complete', { diagnosis: diagnosisResult?.diagnosis || '' })}
+        {screenState === 'escalated' && t('disease.sr.escalated')}
+        {screenState === 'error' && t('disease.sr.failed', { error: errorMsg || '' })}
       </p>
     </main>
   )

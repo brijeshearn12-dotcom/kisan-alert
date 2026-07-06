@@ -14,6 +14,15 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabaseServer'
 import { getVegetationAdvice, type VegetationContext } from '@/lib/gemini'
+import { translateText } from '@/lib/googleCloud'
+
+type TargetLang = 'en' | 'hi' | 'te' | 'mr' | 'gu' | 'kn' | 'ta' | 'bn'
+const TRANSLATABLE_LANGS = new Set<TargetLang>(['en', 'hi', 'te', 'mr', 'gu', 'kn', 'ta', 'bn'])
+function parseTargetLang(raw: unknown): TargetLang {
+  return typeof raw === 'string' && TRANSLATABLE_LANGS.has(raw as TargetLang)
+    ? (raw as TargetLang)
+    : 'en'
+}
 
 function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status })
@@ -44,6 +53,7 @@ export async function POST(request: Request) {
     }
 
     const raw = (body ?? {}) as Record<string, unknown>
+    const targetLang = parseTargetLang(raw.target_lang)
 
     const ctx: VegetationContext = {
       districtName:
@@ -61,8 +71,13 @@ export async function POST(request: Request) {
       status: typeof raw.status === 'string' ? raw.status : 'unknown',
     }
 
-    const result = await getVegetationAdvice(ctx)
-    return NextResponse.json(result)
+    const result = await getVegetationAdvice(ctx, targetLang)
+    let advice = result.advice
+    if (targetLang !== 'en' && advice) {
+      advice = await translateText(advice, targetLang)
+    }
+
+    return NextResponse.json({ ...result, advice })
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Unexpected server error.'

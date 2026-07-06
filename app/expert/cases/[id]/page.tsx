@@ -1,7 +1,12 @@
+'use client'
+
+import * as React from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
-import { createServerSupabaseClient } from '@/lib/supabaseServer'
+import { createClient } from '@/lib/supabase'
 import CaseDetailView from '@/components/CaseDetailView'
 import { EmptyState } from '@/components/EmptyState'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -44,71 +49,147 @@ const LeafIcon = (
   </svg>
 )
 
-export default async function ExpertCaseDetailPage({
+export default function ExpertCaseDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
-  const { id: caseId } = await params
-  const supabase = await createServerSupabaseClient()
+  const resolvedParams = React.use(params)
+  const caseId = resolvedParams.id
 
-  // 1. Authenticate user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const supabase = useMemo(() => createClient(), [])
+  const { t } = useLanguage()
 
-  if (!user) {
-    return <NoticeView title="Authentication Required" message="You must be signed in to access the Rythu Seva Kendra portal." />
+  const [loading, setLoading] = useState(true)
+  const [authState, setAuthState] = useState<'loading' | 'unauthenticated' | 'forbidden' | 'authorized'>('loading')
+  const [caseRow, setCaseRow] = useState<CaseRecord | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+
+    async function initialize() {
+      // 1. Authenticate user
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!active) return
+
+      if (!user) {
+        setAuthState('unauthenticated')
+        setLoading(false)
+        return
+      }
+
+      // 2. Authorize user (must be an expert)
+      const { data: profile } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (!active) return
+
+      if (!profile || profile.role !== 'expert') {
+        setAuthState('forbidden')
+        setLoading(false)
+        return
+      }
+
+      setAuthState('authorized')
+
+      // 3. Fetch specific case details
+      try {
+        const { data, error } = await supabase
+          .from('cases')
+          .select(`
+            id,
+            status,
+            expert_notes,
+            resolved_at,
+            created_at,
+            disease_checks (
+              id,
+              image_url,
+              diagnosis,
+              confidence_score,
+              treatment_advice,
+              users (
+                id,
+                name
+              )
+            )
+          `)
+          .eq('id', caseId)
+          .single()
+
+        if (!active) return
+
+        if (error || !data) {
+          throw new Error(error?.message || 'Case not found')
+        }
+
+        setCaseRow(data as unknown as CaseRecord)
+      } catch (err) {
+        if (active) {
+          setErrorMsg(err instanceof Error ? err.message : 'Case fetch failed')
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    initialize()
+    return () => {
+      active = false
+    }
+  }, [supabase, caseId])
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-canvas font-sans flex items-center justify-center p-5">
+        <div className="w-full max-w-5xl space-y-8 animate-pulse">
+          <div className="h-8 w-48 bg-slate-200 rounded-lg" />
+          <div className="h-60 bg-slate-200 rounded-2xl" />
+        </div>
+      </main>
+    )
   }
 
-  // 2. Authorize user (must be an expert)
-  const { data: profile } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || profile.role !== 'expert') {
-    return <NoticeView title="Access Denied" message="This dashboard is restricted to Rythu Seva Kendra officers and extension officers." />
+  if (authState === 'unauthenticated') {
+    return (
+      <NoticeView
+        title={t('disease.authRequired')}
+        message="You must be signed in to access the Rythu Seva Kendra portal."
+      />
+    )
   }
 
-  // 3. Fetch specific case details
-  const { data: caseRow, error } = await supabase
-    .from('cases')
-    .select(`
-      id,
-      status,
-      expert_notes,
-      resolved_at,
-      created_at,
-      disease_checks (
-        id,
-        image_url,
-        diagnosis,
-        confidence_score,
-        treatment_advice,
-        users (
-          id,
-          name
-        )
-      )
-    `)
-    .eq('id', caseId)
-    .single()
+  if (authState === 'forbidden') {
+    return (
+      <NoticeView
+        title="Access Denied"
+        message="This dashboard is restricted to Rythu Seva Kendra officers and extension officers."
+      />
+    )
+  }
 
-  if (error || !caseRow) {
+  if (errorMsg || !caseRow) {
     return (
       <main className="min-h-screen bg-canvas font-sans flex items-center justify-center p-5">
         <div className="w-full max-w-md">
           <EmptyState
-            title="Case Not Found"
-            description={`The escalated case with ID "${caseId}" does not exist or has been removed from the registry.`}
+            title={t('expert.caseNotFound')}
+            description={t('expert.caseNotFoundDetail', { id: caseId })}
             action={
               <Link
                 href="/expert"
                 className="inline-flex h-9 items-center justify-center rounded-lg bg-primary-green px-4 text-sm font-semibold text-white shadow-sm hover:bg-primary-green/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
               >
-                Return to Dashboard
+                {t('disease.returnDashboard')}
               </Link>
             }
           />
@@ -117,8 +198,6 @@ export default async function ExpertCaseDetailPage({
     )
   }
 
-  const caseTyped = caseRow as unknown as CaseRecord
-
   return (
     <main className="min-h-screen bg-canvas font-sans">
       {/* Navigation header */}
@@ -126,13 +205,13 @@ export default async function ExpertCaseDetailPage({
         <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-2 px-5 sm:px-6">
           <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
             <span className="text-primary-green">{LeafIcon}</span>
-            Rythu Seva Kendra Verification Panel
+            {t('expert.rskPanel')}
           </span>
         </div>
       </nav>
 
       <div className="mx-auto w-full max-w-5xl px-5 py-10 sm:px-6 sm:py-12">
-        <CaseDetailView initialCase={caseTyped} />
+        <CaseDetailView initialCase={caseRow} />
       </div>
     </main>
   )
@@ -141,6 +220,8 @@ export default async function ExpertCaseDetailPage({
 // ── Shared Notice View ──────────────────────────────────────────────────────
 
 function NoticeView({ title, message }: { title: string; message: string }) {
+  const { t } = useLanguage()
+
   return (
     <main className="min-h-screen bg-canvas font-sans flex items-center justify-center p-5">
       <div className="w-full max-w-md">
@@ -152,7 +233,7 @@ function NoticeView({ title, message }: { title: string; message: string }) {
               href="/login"
               className="inline-flex h-9 items-center justify-center rounded-lg bg-primary-green px-4 text-sm font-semibold text-white shadow-sm hover:bg-primary-green/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
             >
-              Sign in
+              {t('login.signIn')}
             </Link>
           }
         />

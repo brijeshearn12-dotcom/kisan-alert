@@ -16,7 +16,8 @@ import DemoPresetChips from '@/components/DemoPresetChips'
 import type { CurrentWeather } from '@/lib/weather'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toSpeechLocale } from '@/lib/i18n/speech'
-import type { LanguageCode } from '@/lib/i18n/translations'
+import type { LanguageCode, TranslationKey } from '@/lib/i18n/translations'
+import { getCropTranslationKey } from '@/lib/i18n/translations'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -269,7 +270,7 @@ export default function RecommendationPage() {
 
   // Language is global now: the single selector in the layout drives it, and the
   // provider handles persistence + restore. This page just reads the value.
-  const { language } = useLanguage()
+  const { language, t } = useLanguage()
 
   // Load the session + district options once on mount.
   useEffect(() => {
@@ -408,16 +409,16 @@ export default function RecommendationPage() {
       <div className="border-b border-slate-100 bg-white">
         <div className="mx-auto flex h-12 w-full max-w-2xl items-center gap-2 px-5 sm:px-6">
           <Link
-            href="/login"
+            href="/dashboard"
             className="flex items-center gap-1.5 text-xs text-slate-400 transition-colors hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 rounded"
           >
             {ArrowLeftIcon}
-            <span>Back</span>
+            <span>{t('recommendation.back')}</span>
           </Link>
           <span className="text-slate-200" aria-hidden="true">/</span>
           <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
             <span className="text-primary-green">{LeafIcon}</span>
-            Crop Advisory
+            {t('recommendation.cropAdvisory')}
           </span>
           {/* Language is chosen from the single global selector (bottom-right). */}
         </div>
@@ -427,11 +428,10 @@ export default function RecommendationPage() {
         {/* Header */}
         <header className="mb-9">
           <h1 className="text-[22px] font-semibold tracking-tight text-slate-900 sm:text-2xl">
-            Find the right crop for your field
+            {t('recommendation.findCropTitle')}
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-slate-500">
-            Select your soil type and district. We&apos;ll use live weather data and AI to
-            recommend the best crop for this season.
+            {t('recommendation.findCropDetail')}
           </p>
         </header>
 
@@ -439,14 +439,14 @@ export default function RecommendationPage() {
 
         {initState === 'unauthenticated' && (
           <NoticeCard
-            title="Please sign in"
-            body="You need to be signed in to generate a crop recommendation."
+            title={t('recommendation.pleaseSignIn')}
+            body={t('recommendation.signInDetail')}
             action={
               <Link
                 href="/login"
                 className="inline-flex h-9 items-center rounded-lg bg-primary-green px-4 text-sm font-medium text-white transition-colors hover:bg-primary-green/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
               >
-                Go to sign in
+                {t('recommendation.goToSignIn')}
               </Link>
             }
           />
@@ -454,8 +454,8 @@ export default function RecommendationPage() {
 
         {initState === 'error' && (
           <NoticeCard
-            title="Something went wrong"
-            body="We couldn't load your districts. Please refresh the page and try again."
+            title={t('recommendation.loadDistrictsFailed')}
+            body={t('recommendation.loadDistrictsFailedDetail')}
           />
         )}
 
@@ -476,7 +476,7 @@ export default function RecommendationPage() {
             {/* State */}
             <section className="mb-6">
               <label htmlFor="state" className="mb-1.5 block text-sm font-medium text-slate-700">
-                State
+                {t('recommendation.form.state')}
               </label>
               <div className="relative">
                 <select
@@ -508,7 +508,7 @@ export default function RecommendationPage() {
             {/* District */}
             <section className="mb-6">
               <label htmlFor="district" className="mb-1.5 block text-sm font-medium text-slate-700">
-                District
+                {t('recommendation.form.district')}
               </label>
               <div className="relative">
                 <select
@@ -593,8 +593,8 @@ export default function RecommendationPage() {
             {/* Soil selection */}
             <section className="mb-7">
               <fieldset>
-                <legend className="mb-2.5 text-sm font-medium text-slate-700">Soil type</legend>
-                <div role="radiogroup" aria-label="Soil type" className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                <legend className="mb-2.5 text-sm font-medium text-slate-700">{t('recommendation.form.soilType')}</legend>
+                <div role="radiogroup" aria-label={t('recommendation.form.soilType')} className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                   {SOIL_TYPES.map((option) => {
                     const selected = soil === option.id
                     const detail = SOIL_DETAILS[option.id]
@@ -626,10 +626,10 @@ export default function RecommendationPage() {
 
                         <span className="min-w-0 flex-1 pt-0.5">
                           <span className="block text-sm font-medium text-slate-900">
-                            {option.label}
+                            {t(`soil.${option.id}.label` as TranslationKey)}
                           </span>
                           <span className="mt-0.5 block text-xs leading-relaxed text-slate-500">
-                            {detail.description}
+                            {t(`soil.${option.id}.desc` as TranslationKey)}
                           </span>
                         </span>
 
@@ -660,16 +660,16 @@ export default function RecommendationPage() {
                 {submitting ? (
                   <>
                     <LoadingDots />
-                    <span>Analysing your field…</span>
+                    <span>{t('recommendation.form.generating')}</span>
                   </>
                 ) : (
-                  'Generate recommendation'
+                  t('recommendation.form.generateBtn')
                 )}
               </button>
 
               {!soil && (
                 <p className="text-center text-xs text-slate-400">
-                  Select a soil type above to continue
+                  {t('recommendation.form.selectSoilPrompt')}
                 </p>
               )}
             </div>
@@ -712,6 +712,7 @@ const ResultCard = forwardRef<
   { result: Recommendation; language: LanguageCode; onReset: () => void }
 >(
   function ResultCard({ result, language, onReset }, ref) {
+    const { t } = useLanguage()
     const confidence = confidenceStyle(result.confidence_score)
     const percent = Math.round(result.confidence_score * 100)
 
@@ -733,10 +734,10 @@ const ResultCard = forwardRef<
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">
-                  Recommended crop
+                  {t('recommendation.result.recommendedCrop')}
                 </p>
                 <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-900">
-                  {result.crop_name}
+                  {t(getCropTranslationKey(result.crop_name))}
                 </h2>
               </div>
               <span
@@ -750,10 +751,14 @@ const ResultCard = forwardRef<
             {/* Confidence bar */}
             <div className="mt-4">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-[0.07em]">Confidence</span>
-                <span className={`text-[11px] font-semibold ${confidence.text}`}>{confidence.label}</span>
+                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-[0.07em]">{t('recommendation.result.confidence')}</span>
+                <span className={`text-[11px] font-semibold ${confidence.text}`}>
+                  {confidence.label === 'High confidence' ? t('disease.confidence.high') :
+                   confidence.label === 'Moderate confidence' ? t('disease.confidence.moderate') :
+                   confidence.label === 'Low confidence' ? t('disease.confidence.low') : confidence.label}
+                </span>
               </div>
-              <div className="h-1.5 w-full rounded-full bg-slate-100" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label={`Confidence: ${percent}%`}>
+              <div className="h-1.5 w-full rounded-full bg-slate-100" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label={`${t('recommendation.result.confidence')}: ${percent}%`}>
                 <div
                   className={`h-full rounded-full transition-all duration-700 ${confidence.bar}`}
                   style={{ width: `${percent}%` }}
@@ -763,7 +768,7 @@ const ResultCard = forwardRef<
 
             {/* Reasoning */}
             <div className="mt-5 border-t border-slate-100 pt-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">Why this crop</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">{t('recommendation.result.whyThisCrop')}</p>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">{fields.reasoning}</p>
               <ListenButton
                 text={fields.reasoning}
@@ -777,9 +782,9 @@ const ResultCard = forwardRef<
                 <div className="flex items-start gap-2.5 rounded-xl border border-accent-amber/20 bg-accent-amber/5 p-3.5">
                   <span className="mt-0.5 shrink-0 text-accent-amber">{WarningIcon}</span>
                   <div>
-                    <p className="text-sm font-medium text-slate-800">Dry spell expected</p>
+                    <p className="text-sm font-medium text-slate-800">{t('recommendation.result.drySpell')}</p>
                     <p className="mt-0.5 text-xs leading-relaxed text-slate-600">
-                      Low rainfall forecast this week. Plan irrigation accordingly.
+                      {t('recommendation.result.drySpellDetail')}
                     </p>
                   </div>
                 </div>
@@ -787,9 +792,9 @@ const ResultCard = forwardRef<
                 <div className="flex items-start gap-2.5 rounded-xl border border-slate-100 bg-slate-50 p-3.5">
                   <span className="mt-0.5 shrink-0 text-primary-green">{DropIcon}</span>
                   <div>
-                    <p className="text-sm font-medium text-slate-700">Adequate rainfall expected</p>
+                    <p className="text-sm font-medium text-slate-700">{t('recommendation.result.adequateRain')}</p>
                     <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-                      No dry spell forecast for the coming week.
+                      {t('recommendation.result.adequateRainDetail')}
                     </p>
                   </div>
                 </div>
@@ -798,7 +803,7 @@ const ResultCard = forwardRef<
 
             {result.error && (
               <p className="mt-4 text-xs leading-relaxed text-slate-400">
-                Showing a safe fallback recommendation while the AI service is unavailable.
+                {t('recommendation.result.fallbackAdvice')}
               </p>
             )}
           </div>
@@ -811,7 +816,7 @@ const ResultCard = forwardRef<
               className="flex items-center gap-1.5 text-xs font-medium text-slate-500 transition-colors hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 rounded"
             >
               {RefreshIcon}
-              Try a different soil type
+              {t('recommendation.result.tryDifferentSoil')}
             </button>
           </div>
         </section>
@@ -821,14 +826,14 @@ const ResultCard = forwardRef<
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <AdvisoryCard
             emoji="🌱"
-            title="Fertilization Tip"
-            body={fields.fertilization_tip?.trim() ? fields.fertilization_tip : 'No recommendation available.'}
+            title={t('recommendation.advisory.fertilizationTip')}
+            body={fields.fertilization_tip?.trim() ? fields.fertilization_tip : t('recommendation.advisory.unavailable')}
             languageCode={toSpeechLocale(language)}
           />
           <AdvisoryCard
             emoji="💧"
-            title="Irrigation Advice"
-            body={fields.irrigation_advice?.trim() ? fields.irrigation_advice : 'No recommendation available.'}
+            title={t('recommendation.advisory.irrigationAdvice')}
+            body={fields.irrigation_advice?.trim() ? fields.irrigation_advice : t('recommendation.advisory.unavailable')}
             languageCode={toSpeechLocale(language)}
           />
         </div>
@@ -854,6 +859,7 @@ function AdvisoryCard({
   body: string
   languageCode: string
 }) {
+  const { t } = useLanguage()
   return (
     <section className="rounded-2xl border border-primary-green/15 bg-primary-green/5 p-5 shadow-sm sm:p-6">
       <div className="flex items-center gap-2.5">
@@ -868,7 +874,7 @@ function AdvisoryCard({
         </h3>
       </div>
       <p className="mt-3 text-sm leading-relaxed text-slate-600">{body}</p>
-      {body !== 'No recommendation available.' && (
+      {body !== t('recommendation.advisory.unavailable') && (
         <ListenButton text={body} languageCode={languageCode} />
       )}
     </section>

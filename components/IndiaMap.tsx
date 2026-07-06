@@ -15,8 +15,9 @@
  */
 
 import React, { useMemo } from 'react'
-import India, { Region } from '@svg-maps/india'
+import India from '@svg-maps/india'
 import { projectCoordinates } from '@/lib/indiaProjection'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export interface District {
   id: string
@@ -79,6 +80,8 @@ export default function IndiaMap({
   onStateSelect,
   onDistrictSelect,
 }: IndiaMapProps) {
+  const { t } = useLanguage()
+
   // Memoize state list from districts to avoid re-calculating on every render
   const seededStates = useMemo(() => {
     return new Set(districts.map((d) => d.state))
@@ -96,10 +99,10 @@ export default function IndiaMap({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Interactive GIS intelligence Map
+            {t('map.title')}
           </h3>
           <p className="text-[10px] text-slate-400">
-            Click states on the map to filter. Tap pulsing markers to inspect.
+            {t('map.instructions')}
           </p>
         </div>
         {selectedState && (
@@ -117,7 +120,7 @@ export default function IndiaMap({
         <svg
           viewBox={India.viewBox}
           className="h-full max-h-[460px] w-auto select-none transition-transform duration-300 ease-out"
-          aria-label="Interactive Map of India"
+          aria-label={t('map.ariaLabel')}
           role="img"
         >
           {/* Definitions for map glow filters */}
@@ -143,7 +146,7 @@ export default function IndiaMap({
                   name={loc.name}
                   role="button"
                   tabIndex={0}
-                  aria-label={`State: ${regionStateName}`}
+                  aria-label={t('map.stateAria', { state: regionStateName })}
                   aria-pressed={isSelected}
                   onClick={() => {
                     if (isSeeded) {
@@ -184,7 +187,7 @@ export default function IndiaMap({
                   className="cursor-pointer group outline-none"
                   role="button"
                   tabIndex={0}
-                  aria-label={`District: ${d.name}`}
+                  aria-label={t('map.districtAria', { district: d.name })}
                   onClick={() => onDistrictSelect(d.id)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {

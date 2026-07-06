@@ -265,6 +265,11 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
       }))
     }
 
+    // ── 8. Translate advisory fields (optional; English is the base) ──────
+    // Only reasoning / fertilization_tip / irrigation_advice are translated.
+    // crop_name, confidence_score, and is_dry_spell always stay in English.
+    // translateText() never throws — it returns the original text on failure —
+    // so a translation problem simply yields English values, never a crash.
     const recommendation = await getCropRecommendation(
       finalSoilType,
       district.name,
@@ -273,17 +278,33 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
       viableCrops,
       weatherSummary,
       soilMoisture,
+      targetLang,
     )
 
     if (isDev) {
       console.log('Gemini output:', JSON.stringify(recommendation))
     }
 
+    let translated:
+      | { reasoning: string; fertilization_tip: string; irrigation_advice: string }
+      | undefined
+
+    if (targetLang !== 'en') {
+      const [reasoning, fertilization_tip, irrigation_advice] = await Promise.all([
+        translateText(recommendation.reasoning, targetLang),
+        translateText(recommendation.fertilization_tip, targetLang),
+        translateText(recommendation.irrigation_advice, targetLang),
+      ])
+      translated = { reasoning, fertilization_tip, irrigation_advice }
+    }
+
+    const reasoningToSave = translated?.reasoning || recommendation.reasoning
+
     // ── 7. Persist (best-effort; a write failure must not lose the result) ─
     const { error: insertError } = await supabase.from('recommendations').insert({
       user_id: userId,
       crop_name: recommendation.crop_name,
-      reasoning: recommendation.reasoning,
+      reasoning: reasoningToSave,
       confidence_score: recommendation.confidence_score,
     })
 
@@ -310,23 +331,6 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
       console.error('Failed to save user district:', districtSaveError.message)
     }
 
-    // ── 8. Translate advisory fields (optional; English is the base) ──────
-    // Only reasoning / fertilization_tip / irrigation_advice are translated.
-    // crop_name, confidence_score, and is_dry_spell always stay in English.
-    // translateText() never throws — it returns the original text on failure —
-    // so a translation problem simply yields English values, never a crash.
-    let translated:
-      | { reasoning: string; fertilization_tip: string; irrigation_advice: string }
-      | undefined
-
-    if (targetLang !== 'en') {
-      const [reasoning, fertilization_tip, irrigation_advice] = await Promise.all([
-        translateText(recommendation.reasoning, targetLang),
-        translateText(recommendation.fertilization_tip, targetLang),
-        translateText(recommendation.irrigation_advice, targetLang),
-      ])
-      translated = { reasoning, fertilization_tip, irrigation_advice }
-    }
 
     // Trigger Firebase notifications
     const notificationPromises = []

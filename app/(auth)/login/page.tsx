@@ -3,10 +3,12 @@
 import { useState, KeyboardEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
+  const { t } = useLanguage()
 
   const [isSignUp, setIsSignUp]   = useState(false)
   const [email, setEmail]         = useState('')
@@ -53,7 +55,7 @@ export default function LoginPage() {
           .insert({ id: data.user.id, name, role: 'farmer' })
 
         if (profileError) {
-          setError('Account created but profile setup failed — please contact support.')
+          setError(t('login.profileSetupFailed'))
           setLoading(false)
           return
         }
@@ -70,7 +72,7 @@ export default function LoginPage() {
       if (signInError) {
         // Make Supabase's terse errors friendlier.
         if (signInError.message.toLowerCase().includes('invalid login')) {
-          setError('Incorrect email or password. Please try again.')
+          setError(t('login.incorrectCredentials'))
         } else {
           setError(signInError.message)
         }
@@ -118,12 +120,12 @@ export default function LoginPage() {
             {LeafIcon}
           </div>
           <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">
-            {isSignUp ? 'Create an account' : 'Welcome back'}
+            {isSignUp ? t('login.createAccount') : t('login.welcomeBack')}
           </h1>
           <p className="text-sm text-slate-500">
             {isSignUp 
-              ? 'Join Kisan Alert to get started.' 
-              : 'Enter your credentials to access your account.'}
+              ? t('login.joinKisanAlert') 
+              : t('login.enterCredentials')}
           </p>
         </div>
 
@@ -138,7 +140,7 @@ export default function LoginPage() {
           >
             <div className="space-y-1.5 pb-1">
               <label htmlFor="name" className="block text-sm font-medium text-slate-700">
-                Full name
+                {t('login.fullName')}
               </label>
               <input
                 id="name"
@@ -146,7 +148,7 @@ export default function LoginPage() {
                 required={isSignUp}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Ramesh Kumar"
+                placeholder={t('login.fullNamePlaceholder')}
                 className="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 focus:bg-white transition-all duration-200 caret-emerald-600"
               />
             </div>
@@ -155,7 +157,7 @@ export default function LoginPage() {
           {/* Email */}
           <div className="space-y-1.5">
             <label htmlFor="email" className="block text-sm font-medium text-slate-700">
-              Email address
+              {t('login.emailAddress')}
             </label>
             <input
               id="email"
@@ -163,7 +165,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t('login.emailPlaceholder')}
               className="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 focus:bg-white transition-all duration-200 caret-emerald-600"
             />
           </div>
@@ -171,7 +173,7 @@ export default function LoginPage() {
           {/* Password */}
           <div className="space-y-1.5">
             <label htmlFor="password" className="block text-sm font-medium text-slate-700">
-              Password
+              {t('login.password')}
             </label>
             <div className="relative">
               <input
@@ -183,22 +185,22 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={handleKeyEvent}
                 onKeyUp={handleKeyEvent}
-                placeholder="••••••••"
+                placeholder={t('login.passwordPlaceholder')}
                 className="w-full bg-slate-50/50 border border-slate-200 rounded-xl pl-4 pr-12 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 focus:bg-white transition-all duration-200 caret-emerald-600"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 focus:outline-none rounded-md transition-colors"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                title={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
+                title={showPassword ? t('login.hidePassword') : t('login.showPassword')}
               >
                 {showPassword ? EyeOffIcon : EyeIcon}
               </button>
             </div>
             {capsLockActive && (
               <p className="flex items-center gap-1.5 text-xs text-amber-600 font-medium mt-1.5 transition-opacity duration-200">
-                {WarningIcon} Caps Lock is on
+                {WarningIcon} {t('login.capsLockOn')}
               </p>
             )}
           </div>
@@ -222,8 +224,8 @@ export default function LoginPage() {
             {loading && SpinnerIcon}
             <span>
               {loading
-                ? (isSignUp ? 'Creating account...' : 'Signing in...')
-                : (isSignUp ? 'Create account' : 'Sign in')}
+                ? (isSignUp ? t('login.creatingAccount') : t('login.signingIn'))
+                : (isSignUp ? t('login.createAccountBtn') : t('login.signIn'))}
             </span>
           </button>
         </form>
@@ -231,14 +233,14 @@ export default function LoginPage() {
         {/* Footer Toggle */}
         <div className="mt-8 text-center">
           <p className="text-sm text-slate-500">
-            {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+            {isSignUp ? t('login.alreadyHaveAccount') : t('login.dontHaveAccount')}
             {' '}
             <button
               type="button"
               onClick={toggle}
               className="text-emerald-600 font-semibold hover:text-emerald-700 hover:underline underline-offset-4 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/20 rounded px-1 -mx-1"
             >
-              {isSignUp ? 'Sign in' : 'Sign up'}
+              {isSignUp ? t('login.signIn') : t('login.signUp')}
             </button>
           </p>
         </div>

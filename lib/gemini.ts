@@ -482,6 +482,9 @@ export interface DiseaseDiagnosis {
   diagnosis: string | null
   confidence_score: number
   treatment_advice: string | null
+  severity?: 'LOW' | 'MEDIUM' | 'HIGH' | null
+  spread_risk?: 'LOW' | 'MEDIUM' | 'HIGH' | null
+  immediate_action?: string | null
   error?: string
 }
 
@@ -490,6 +493,9 @@ const DIAGNOSIS_FALLBACK: DiseaseDiagnosis = {
   diagnosis: null,
   confidence_score: 0,
   treatment_advice: null,
+  severity: null,
+  spread_risk: null,
+  immediate_action: null,
   error: 'ai_unavailable',
 }
 
@@ -561,9 +567,9 @@ function buildDiagnosisPrompt(cropType?: string, targetLangName: string = 'Engli
     '- multiple diseases are plausible',
     '- you cannot confidently distinguish between conditions.',
     '',
-    `You MUST respond and write all text fields (diagnosis, treatment_advice) entirely in the ${targetLangName} language.`,
+    `You MUST respond and write all text fields (diagnosis, treatment_advice, immediate_action) entirely in the ${targetLangName} language.`,
     'Respond with ONLY valid JSON (no markdown, no code fences, no commentary) in exactly this shape:',
-    `{"diagnosis": "<disease name or condition in ${targetLangName}>", "confidence_score": <number between 0 and 1>, "treatment_advice": "<2-3 simple sentences in ${targetLangName} using practical, locally available remedies>"}`,
+    `{"diagnosis": "<disease name or condition in ${targetLangName}>", "confidence_score": <number between 0 and 1>, "treatment_advice": "<2-3 simple sentences in ${targetLangName} using practical, locally available remedies>", "severity": "<LOW, MEDIUM, or HIGH>", "spread_risk": "<LOW, MEDIUM, or HIGH>", "immediate_action": "<one short sentence of urgent advice in ${targetLangName} under 10 words>" }`,
   ].join('\n')
 }
 
@@ -578,6 +584,9 @@ function normalizeDiagnosisOutput(parsed: unknown): DiseaseDiagnosis | null {
   const rawDiagnosis = record.diagnosis
   const rawTreatment = record.treatment_advice
   const rawScore = record.confidence_score
+  const rawSeverity = record.severity
+  const rawSpreadRisk = record.spread_risk || record.spreadRisk
+  const rawImmediateAction = record.immediate_action || record.immediateAction
 
   if (typeof rawDiagnosis !== 'string' || rawDiagnosis.trim() === '') return null
   if (typeof rawTreatment !== 'string' || rawTreatment.trim() === '') return null
@@ -587,10 +596,37 @@ function normalizeDiagnosisOutput(parsed: unknown): DiseaseDiagnosis | null {
     typeof rawScore === 'number' && Number.isFinite(rawScore) ? rawScore : 0.5
   const confidence_score = Math.min(1, Math.max(0, numericScore))
 
+  // Validate severity
+  let severity: 'LOW' | 'MEDIUM' | 'HIGH' | null = null
+  if (typeof rawSeverity === 'string') {
+    const sevUpper = rawSeverity.toUpperCase().trim()
+    if (sevUpper === 'LOW' || sevUpper === 'MEDIUM' || sevUpper === 'HIGH') {
+      severity = sevUpper
+    }
+  }
+
+  // Validate spread risk
+  let spread_risk: 'LOW' | 'MEDIUM' | 'HIGH' | null = null
+  if (typeof rawSpreadRisk === 'string') {
+    const riskUpper = rawSpreadRisk.toUpperCase().trim()
+    if (riskUpper === 'LOW' || riskUpper === 'MEDIUM' || riskUpper === 'HIGH') {
+      spread_risk = riskUpper
+    }
+  }
+
+  // Validate immediate action
+  let immediate_action: string | null = null
+  if (typeof rawImmediateAction === 'string' && rawImmediateAction.trim() !== '') {
+    immediate_action = rawImmediateAction.trim()
+  }
+
   return {
     diagnosis: rawDiagnosis.trim(),
     confidence_score,
     treatment_advice: rawTreatment.trim(),
+    severity,
+    spread_risk,
+    immediate_action,
   }
 }
 
@@ -710,9 +746,9 @@ function buildTextDiagnosisPrompt(description: string, targetLangName: string = 
     '- multiple diseases are plausible',
     '- key details (crop type, duration, spread) are missing.',
     '',
-    `You MUST respond and write all text fields (diagnosis, treatment_advice) entirely in the ${targetLangName} language.`,
+    `You MUST respond and write all text fields (diagnosis, treatment_advice, immediate_action) entirely in the ${targetLangName} language.`,
     'Respond with ONLY valid JSON (no markdown, no code fences, no commentary) in exactly this shape:',
-    `{"diagnosis": "<disease name or condition in ${targetLangName}>", "confidence_score": <number between 0 and 1>, "treatment_advice": "<2-3 sentences in ${targetLangName}, use locally available remedies like neem, urea, fungicide etc.>" }`,
+    `{"diagnosis": "<disease name or condition in ${targetLangName}>", "confidence_score": <number between 0 and 1>, "treatment_advice": "<2-3 sentences in ${targetLangName}, use locally available remedies like neem, urea, fungicide etc.>", "severity": "<LOW, MEDIUM, or HIGH>", "spread_risk": "<LOW, MEDIUM, or HIGH>", "immediate_action": "<one short sentence of urgent advice in ${targetLangName} under 10 words>" }`,
   ].join('\n')
 }
 

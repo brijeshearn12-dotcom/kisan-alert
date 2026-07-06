@@ -7,7 +7,7 @@ import { EntranceAnimation } from '@/components/EntranceAnimation'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { getLanguageMeta } from '@/lib/i18n/translations'
+import { getLanguageMeta, parseTreatmentAdvice } from '@/lib/i18n/translations'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -60,19 +60,7 @@ const ShieldAlertIcon = (
   </svg>
 )
 
-const CheckCircleIcon = (
-  <svg viewBox="0 0 24 24" width="16" height="16" {...stroke} className="text-primary-green">
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-    <polyline points="22 4 12 14.01 9 11.01" />
-  </svg>
-)
 
-const ClockIcon = (
-  <svg viewBox="0 0 24 24" width="16" height="16" {...stroke} className="text-accent-amber">
-    <circle cx="12" cy="12" r="10" />
-    <polyline points="12 6 12 12 16 14" />
-  </svg>
-)
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -258,6 +246,7 @@ export default function ExpertDashboardPage() {
             const check = record.disease_checks
             const farmer = check?.users
             const isPending = record.status === 'pending'
+            const { treatment_advice: cleanAdvice } = parseTreatmentAdvice(check?.treatment_advice || null)
 
             const isValidUrl =
               check?.image_url &&
@@ -271,63 +260,56 @@ export default function ExpertDashboardPage() {
                     {isValidUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={check.image_url}
-                        alt={`Crop diagnosed as ${check.diagnosis}`}
+                        src={check.image_url!}
+                        alt="Crop leaf scan"
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-slate-100 text-slate-400 text-xs">
-                        {t('expert.noImage')}
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 bg-slate-50 text-slate-400">
+                        <span aria-hidden="true" className="text-xl">📷</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{t('expert.imageUnavailable')}</span>
                       </div>
                     )}
-
-                    {/* Status Badge overlay */}
-                    <div className="absolute right-3 top-3">
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm backdrop-blur-md ${
-                        isPending
-                          ? 'bg-accent-amber/10 text-accent-amber ring-1 ring-accent-amber/20'
-                          : 'bg-primary-green/10 text-primary-green ring-1 ring-primary-green/20'
-                      }`}>
-                        {isPending ? ClockIcon : CheckCircleIcon}
-                        <span>{isPending ? t('expert.status.pending') : t('expert.status.resolved')}</span>
-                      </span>
+                    <div
+                      className={`absolute right-3 top-3 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm ${
+                        isPending ? 'bg-amber-500' : 'bg-primary-green'
+                      }`}
+                    >
+                      <span>{isPending ? t('expert.status.pending') : t('expert.status.resolved')}</span>
                     </div>
                   </div>
 
-                  {/* Content body */}
-                  <div className="flex flex-1 flex-col p-5 sm:p-6">
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between text-xs text-slate-400">
-                        <span>{t('expert.submittedOn', { date: new Date(record.created_at).toLocaleDateString(getLanguageMeta(language).locale, { day: 'numeric', month: 'short', year: 'numeric' }) })}</span>
-                        {check?.confidence_score !== undefined && (
-                          <span className="font-mono">{t('expert.confidence', { percent: (check.confidence_score * 100).toFixed(0) })}</span>
-                        )}
-                      </div>
+                  {/* Body details */}
+                  <div className="flex flex-col flex-1 p-5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-semibold text-slate-400">
+                        {new Date(record.created_at).toLocaleDateString(getLanguageMeta(language).locale, { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
 
-                      <h3 className="mt-2.5 text-base font-bold text-slate-900 line-clamp-1">
-                        {check?.diagnosis || t('expert.unknownDisease')}
-                      </h3>
+                    <h3 className="mt-2.5 text-base font-bold text-slate-900 line-clamp-1">
+                      {check?.diagnosis || t('expert.unknownDisease')}
+                    </h3>
 
-                      <p className="mt-1.5 text-xs text-slate-500">
-                        {t('expert.farmer', { name: farmer?.name || t('expert.anonymousFarmer') })}
+                    <p className="mt-1.5 text-xs text-slate-500">
+                      {t('expert.farmer', { name: farmer?.name || t('expert.anonymousFarmer') })}
+                    </p>
+
+                    <div className="mt-4 border-t border-slate-100 pt-4">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">{t('expert.aiTreatment')}</h4>
+                      <p className="mt-1.5 text-xs leading-relaxed text-slate-600 line-clamp-3">
+                        {cleanAdvice || t('expert.noTreatment')}
                       </p>
+                    </div>
 
-                      <div className="mt-4 border-t border-slate-100 pt-4">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">{t('expert.aiTreatment')}</h4>
-                        <p className="mt-1.5 text-xs leading-relaxed text-slate-600 line-clamp-3">
-                          {check?.treatment_advice || t('expert.noTreatment')}
+                    {record.expert_notes && (
+                      <div className="mt-4 border-t border-slate-100 pt-4 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">{t('expert.rskFeedback')}</h4>
+                        <p className="mt-1.5 text-xs leading-relaxed text-slate-700">
+                          {record.expert_notes}
                         </p>
                       </div>
-
-                      {record.expert_notes && (
-                        <div className="mt-4 border-t border-slate-100 pt-4 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">{t('expert.rskFeedback')}</h4>
-                          <p className="mt-1.5 text-xs leading-relaxed text-slate-700">
-                            {record.expert_notes}
-                          </p>
-                        </div>
-                      )}
-                    </div>
+                    )}
 
                     {/* Actions bar */}
                     <div className="mt-5 border-t border-slate-100 pt-4">

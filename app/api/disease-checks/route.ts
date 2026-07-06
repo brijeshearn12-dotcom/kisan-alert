@@ -110,6 +110,9 @@ export async function POST(request: Request) {
           diagnosis: textResult.diagnosis,
           confidence_score: textResult.confidence_score,
           treatment_advice: textResult.treatment_advice,
+          severity: null,
+          spread_risk: null,
+          immediate_action: null,
           escalated: false,
           case_id: null,
           disease_check_id: null,
@@ -119,17 +122,32 @@ export async function POST(request: Request) {
 
       let diagnosisToSave = textResult.diagnosis
       let treatmentToSave = textResult.treatment_advice
+      let immediateActionToSave = textResult.immediate_action
 
       if (targetLang !== 'en' && textResult.diagnosis && textResult.treatment_advice) {
-        const [transDiagnosis, transTreatment] = await Promise.all([
+        const transPromises = [
           translateText(textResult.diagnosis, targetLang),
           translateText(textResult.treatment_advice, targetLang),
-        ])
+        ]
+        if (textResult.immediate_action) {
+          transPromises.push(translateText(textResult.immediate_action, targetLang))
+        }
+        const [transDiagnosis, transTreatment, transImmediate] = await Promise.all(transPromises)
         diagnosisToSave = transDiagnosis
         treatmentToSave = transTreatment
+        if (textResult.immediate_action) {
+          immediateActionToSave = transImmediate
+        }
       }
 
       // Persist the text-based diagnosis (image_url is null for voice path)
+      const serializedTreatment = JSON.stringify({
+        treatment_advice: treatmentToSave,
+        severity: textResult.severity,
+        spread_risk: textResult.spread_risk,
+        immediate_action: immediateActionToSave,
+      })
+
       const { data: check, error: checkError } = await supabase
         .from('disease_checks')
         .insert({
@@ -137,7 +155,7 @@ export async function POST(request: Request) {
           image_url: null,
           diagnosis: diagnosisToSave,
           confidence_score: textResult.confidence_score,
-          treatment_advice: treatmentToSave,
+          treatment_advice: serializedTreatment,
         })
         .select('id')
         .single<{ id: string }>()
@@ -170,6 +188,9 @@ export async function POST(request: Request) {
         diagnosis: diagnosisToSave,
         confidence_score: textResult.confidence_score,
         treatment_advice: treatmentToSave,
+        severity: textResult.severity,
+        spread_risk: textResult.spread_risk,
+        immediate_action: immediateActionToSave,
         escalated: caseId !== null,
         case_id: caseId,
         disease_check_id: check.id,
@@ -203,6 +224,9 @@ export async function POST(request: Request) {
         diagnosis: result.diagnosis,
         confidence_score: result.confidence_score,
         treatment_advice: result.treatment_advice,
+        severity: null,
+        spread_risk: null,
+        immediate_action: null,
         escalated: false,
         case_id: null,
         disease_check_id: null,
@@ -212,18 +236,33 @@ export async function POST(request: Request) {
 
     let diagnosisToSave = result.diagnosis
     let treatmentToSave = result.treatment_advice
+    let immediateActionToSave = result.immediate_action
 
     if (targetLang !== 'en' && result.diagnosis && result.treatment_advice) {
-      const [transDiagnosis, transTreatment] = await Promise.all([
+      const transPromises = [
         translateText(result.diagnosis, targetLang),
         translateText(result.treatment_advice, targetLang),
-      ])
+      ]
+      if (result.immediate_action) {
+        transPromises.push(translateText(result.immediate_action, targetLang))
+      }
+      const [transDiagnosis, transTreatment, transImmediate] = await Promise.all(transPromises)
       diagnosisToSave = transDiagnosis
       treatmentToSave = transTreatment
+      if (result.immediate_action) {
+        immediateActionToSave = transImmediate
+      }
     }
 
     // ── 4. Persist the successful diagnosis ───────────────────────────────
     // Note: `disease_checks` has no crop_type column, so it is not stored here.
+    const serializedTreatment = JSON.stringify({
+      treatment_advice: treatmentToSave,
+      severity: result.severity,
+      spread_risk: result.spread_risk,
+      immediate_action: immediateActionToSave,
+    })
+
     const { data: check, error: checkError } = await supabase
       .from('disease_checks')
       .insert({
@@ -231,7 +270,7 @@ export async function POST(request: Request) {
         image_url: imageUrl,
         diagnosis: diagnosisToSave,
         confidence_score: result.confidence_score,
-        treatment_advice: treatmentToSave,
+        treatment_advice: serializedTreatment,
       })
       .select('id')
       .single<{ id: string }>()
@@ -265,6 +304,9 @@ export async function POST(request: Request) {
       diagnosis: diagnosisToSave,
       confidence_score: result.confidence_score,
       treatment_advice: treatmentToSave,
+      severity: result.severity,
+      spread_risk: result.spread_risk,
+      immediate_action: immediateActionToSave,
       escalated: caseId !== null,
       case_id: caseId,
       disease_check_id: check.id,

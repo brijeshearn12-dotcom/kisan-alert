@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { getLanguageMeta, formatNumber } from '@/lib/i18n/translations'
+import { getLanguageMeta, formatNumber, parseTreatmentAdvice } from '@/lib/i18n/translations'
 
 interface FarmerProfile {
   id: string
@@ -13,10 +13,10 @@ interface FarmerProfile {
 
 interface DiseaseCheck {
   id: string
-  image_url: string
-  diagnosis: string
+  image_url: string | null
+  diagnosis: string | null
   confidence_score: number
-  treatment_advice: string
+  treatment_advice: string | null
   users: FarmerProfile | null
 }
 
@@ -74,6 +74,7 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
   const check = caseRecord.disease_checks
   const farmer = check?.users
   const isPending = caseRecord.status === 'pending'
+  const parsedAdvice = parseTreatmentAdvice(check?.treatment_advice || null)
 
   // Validate URL structure (prevent null or broken strings)
   const isValidUrl =
@@ -136,7 +137,7 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
               {isValidUrl && !imageError ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={check.image_url}
+                  src={check.image_url || undefined}
                   alt={`Crop diagnosed as ${check.diagnosis}`}
                   className="h-full w-full object-cover"
                   onError={() => setImageError(true)}
@@ -191,8 +192,14 @@ export default function CaseDetailView({ initialCase }: CaseDetailViewProps) {
 
               <div className="mt-6 border-t border-slate-100 pt-6">
                 <h3 className="text-sm font-semibold text-slate-800">{t('expert.aiTreatment')}</h3>
+                {parsedAdvice.immediate_action && (
+                  <div className="my-3 rounded-xl border border-rose-100 bg-rose-50/60 p-3.5 text-xs text-rose-800">
+                    <span className="font-bold block mb-1 uppercase tracking-wide text-rose-500">{t('disease.immediateAction')}</span>
+                    {parsedAdvice.immediate_action}
+                  </div>
+                )}
                 <p className="mt-2 text-sm leading-relaxed text-slate-600 whitespace-pre-line">
-                  {check?.treatment_advice || t('expert.noTreatment')}
+                  {parsedAdvice.treatment_advice || t('expert.noTreatment')}
                 </p>
               </div>
             </div>

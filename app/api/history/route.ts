@@ -3,6 +3,8 @@ import { createServerSupabaseClient } from '@/lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
 
+import { parseTreatmentAdvice } from '@/lib/i18n/translations'
+
 interface RecommendationRow {
   id: string
   crop_name: string | null
@@ -79,11 +81,12 @@ export async function GET() {
 
     if (checkRes.data) {
       checkRes.data.forEach((row) => {
+        const { treatment_advice } = parseTreatmentAdvice(row.treatment_advice)
         timeline.push({
           id: row.id,
           type: 'disease_check',
           title: row.diagnosis || 'Plant Diagnosis',
-          details: row.treatment_advice || '',
+          details: treatment_advice,
           confidence_score: row.confidence_score,
           created_at: row.created_at,
           image_url: row.image_url,

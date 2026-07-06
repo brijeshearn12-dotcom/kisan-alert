@@ -20,6 +20,9 @@ interface DiseaseCheckResponse {
   diagnosis: string | null
   confidence_score: number
   treatment_advice: string | null
+  severity?: 'LOW' | 'MEDIUM' | 'HIGH' | null
+  spread_risk?: 'LOW' | 'MEDIUM' | 'HIGH' | null
+  immediate_action?: string | null
   escalated: boolean
   case_id: string | null
   disease_check_id: string | null
@@ -414,10 +417,10 @@ export default function DiseaseCheckPage() {
             </motion.div>
           )}
 
-          {/* 5. Diagnosis Result (Success) — from image OR voice */}
-          {screenState === 'success' && diagnosisResult && (imageUrl || voiceDescription) && (
+          {/* 5. Diagnosis Result (Success / Escalated) — from image OR voice */}
+          {(screenState === 'success' || screenState === 'escalated') && diagnosisResult && (imageUrl || voiceDescription) && (
             <EntranceAnimation
-              key="success"
+              key="result"
               exit={{ opacity: 0 }}
               className="space-y-6"
             >
@@ -454,30 +457,105 @@ export default function DiseaseCheckPage() {
                 )}
 
                 <div className="p-5 sm:p-6">
-                  {/* Title and Badge */}
-                  <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+                  {/* Low Confidence / Escalation Warning Banner */}
+                  {(screenState === 'escalated' || diagnosisResult.escalated) && (
+                    <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-800">
+                      <span className="mt-0.5 shrink-0 text-amber-500">{ShieldAlertIcon}</span>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-amber-900 leading-snug">
+                          {t('disease.lowConfidenceWarning')}
+                        </h4>
+                        {diagnosisResult.case_id && (
+                          <p className="mt-1.5 text-xs font-semibold text-amber-700">
+                            {t('disease.referenceId', { id: diagnosisResult.case_id })}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Title and Badges */}
+                  <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-5">
                     <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{t('disease.label')}</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        {screenState === 'escalated' || diagnosisResult.escalated ? t('disease.suspectedDisease') : t('disease.label')}
+                      </span>
                       <h2 className="text-xl font-bold text-slate-900 mt-0.5">
                         {diagnosisResult.diagnosis}
                       </h2>
                     </div>
 
-                    {diagnosisResult.confidence_score !== undefined && (
-                      (() => {
-                        const style = confidenceStyle(diagnosisResult.confidence_score, t)
-                        return (
-                          <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs ${style.text} ${style.bg} ring-1 ring-inset ${style.ring} self-start sm:self-center`}>
-                            <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
-                            <span>{t('disease.confidencePercent', { percent: (diagnosisResult.confidence_score * 100).toFixed(0) })}</span>
-                          </div>
-                        )
-                      })()
-                    )}
+                    <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+                      {diagnosisResult.confidence_score !== undefined && (
+                        (() => {
+                          const style = confidenceStyle(diagnosisResult.confidence_score, t)
+                          return (
+                            <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs ${style.text} ${style.bg} ring-1 ring-inset ${style.ring}`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
+                              <span>{t('disease.confidencePercent', { percent: (diagnosisResult.confidence_score * 100).toFixed(0) })}</span>
+                            </div>
+                          )
+                        })()
+                      )}
+
+                      {/* Severity badge */}
+                      {diagnosisResult.severity && (
+                        (() => {
+                          const sev = diagnosisResult.severity.toUpperCase()
+                          const classes = 
+                            sev === 'HIGH' 
+                              ? 'bg-rose-50 text-rose-700 ring-rose-600/10 dark:bg-rose-950/20 dark:text-rose-400'
+                              : sev === 'MEDIUM'
+                                ? 'bg-amber-50 text-amber-700 ring-amber-600/10 dark:bg-amber-950/20 dark:text-amber-400'
+                                : 'bg-emerald-50 text-emerald-700 ring-emerald-600/10 dark:bg-emerald-950/20 dark:text-emerald-400'
+                          return (
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${classes}`}>
+                              {t(`disease.severity.${sev.toLowerCase()}` as TranslationKey)}
+                            </span>
+                          )
+                        })()
+                      )}
+                    </div>
                   </div>
 
+                  {/* Spread Risk Section */}
+                  {diagnosisResult.spread_risk && (
+                    <div className="mt-5 border-b border-slate-100 pb-5">
+                      <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                        {(() => {
+                          const risk = diagnosisResult.spread_risk.toUpperCase()
+                          const emoji = risk === 'HIGH' ? '🔴' : risk === 'MEDIUM' ? '🟡' : '🟢'
+                          return (
+                            <>
+                              <span aria-hidden="true" className="text-sm">{emoji}</span>
+                              <span>{t(`disease.spreadRisk.${risk.toLowerCase()}` as TranslationKey)}</span>
+                            </>
+                          )
+                        })()}
+                      </h3>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {t(`disease.spreadRisk.${diagnosisResult.spread_risk.toLowerCase()}.desc` as TranslationKey)}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Immediate Action Card */}
+                  {diagnosisResult.immediate_action && (
+                    <div className="mt-5 rounded-2xl border border-rose-100 bg-rose-50/60 p-4 shadow-sm">
+                      <div className="flex items-center gap-2 text-rose-800">
+                        <span aria-hidden="true" className="text-sm">🚨</span>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-rose-600">
+                          {t('disease.immediateAction')}
+                        </h4>
+                      </div>
+                      <p className="mt-2 text-sm font-semibold text-rose-950 leading-relaxed">
+                        {diagnosisResult.immediate_action}
+                      </p>
+                    </div>
+                  )}
+
                   {/* Recommendation Details */}
-                  <div className="mt-6 border-t border-slate-100 pt-6">
+                  <div className="mt-6">
                     <h3 className="text-sm font-semibold text-slate-800">{t('disease.recommendedTreatment')}</h3>
                     <p className="mt-2 text-sm leading-relaxed text-slate-600 whitespace-pre-line">
                       {diagnosisResult.treatment_advice}
@@ -502,88 +580,7 @@ export default function DiseaseCheckPage() {
                 {t('disease.scanAnother')}
               </button>
             </EntranceAnimation>
-          )}
-
-          {/* 6. Escalated to Expert State */}
-          {screenState === 'escalated' && diagnosisResult && (imageUrl || voiceDescription) && (
-            <EntranceAnimation
-              key="escalated"
-              exit={{ opacity: 0 }}
-              className="space-y-6"
-            >
-              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                {imageUrl && (
-                  <div className="relative aspect-[16/9] w-full bg-slate-100 border-b border-slate-100">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={imageUrl}
-                      alt="Escalated plant leaf"
-                      className="h-full w-full object-cover"
-                    />
-                    <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-accent-amber px-3 py-1 text-xs font-semibold text-white shadow-sm">
-                      {ShieldAlertIcon}
-                      {t('disease.caseSubmitted')}
-                    </div>
-                  </div>
-                )}
-
-                {!imageUrl && voiceDescription && (
-                  <div className="border-b border-slate-100 bg-accent-amber/5 p-4">
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-amber/10 text-accent-amber">
-                        {ShieldAlertIcon}
-                      </span>
-                      <span className="text-xs font-semibold text-accent-amber uppercase tracking-wider">{t('disease.voiceCaseSubmitted')}</span>
-                    </div>
-                    <p className="mt-2 text-xs italic text-slate-500 line-clamp-2">&ldquo;{voiceDescription}&rdquo;</p>
-                  </div>
-                )}
-
-                <div className="p-5 sm:p-6">
-                  <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{t('disease.resolutionFlow')}</span>
-                    <h2 className="text-xl font-bold text-slate-900 mt-0.5">
-                      {t('disease.rskForwarded')}
-                    </h2>
-                  </div>
-
-                  <p className="mt-4 text-sm leading-relaxed text-slate-600">
-                    {t('disease.rskExplanation', { percent: (diagnosisResult.confidence_score * 100).toFixed(0) })}
-                  </p>
-
-                  <div className="mt-6 border-t border-slate-100 pt-6 space-y-4">
-                    <div className="flex gap-3">
-                      <div className="text-slate-400 shrink-0 mt-0.5">{CheckIcon}</div>
-                      <div>
-                        <h4 className="text-sm font-semibold text-slate-800">{t('disease.caseCreated')}</h4>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          {diagnosisResult.case_id ? t('disease.referenceId', { id: diagnosisResult.case_id }) : t('disease.pendingAssignment')}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <div className="text-slate-400 shrink-0 mt-0.5">{CheckIcon}</div>
-                      <div>
-                        <h4 className="text-sm font-semibold text-slate-800">{t('disease.reviewSla')}</h4>
-                        <p className="text-xs text-slate-500 mt-0.5">{t('disease.reviewSlaDetail')}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Reset button */}
-              <button
-                type="button"
-                onClick={handleReset}
-                className="flex w-full h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40"
-              >
-                {RefreshIcon}
-                {t('disease.scanAnother')}
-              </button>
-            </EntranceAnimation>
-          )}
+          ) /* End of result card */}
 
           {/* 7. Error state card */}
           {screenState === 'error' && errorMsg && (

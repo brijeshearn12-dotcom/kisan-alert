@@ -285,24 +285,50 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
       console.log('Gemini output:', JSON.stringify(recommendation))
     }
 
+    const isLegacy = !recommendation.bestCrop
+
     let translated:
       | { reasoning: string; fertilization_tip: string; irrigation_advice: string }
       | undefined
 
-    if (targetLang !== 'en') {
-      const [reasoning, fertilization_tip, irrigation_advice] = await Promise.all([
-        translateText(recommendation.bestCrop.summary, targetLang),
-        translateText(recommendation.bestCrop.fertilization_tip, targetLang),
-        translateText(recommendation.bestCrop.irrigation_advice, targetLang),
-      ])
-      translated = { reasoning, fertilization_tip, irrigation_advice }
+    let cleanSummary = ''
+    let cleanFert = ''
+    let cleanIrr = ''
+    let bestCropName = ''
+    let suitabilityScore = 75
+
+    if (isLegacy) {
+      const legacyText = recommendation.legacyReasoning || 'AI recommendation unavailable. Safest seasonal fallback choice.'
+      cleanSummary = legacyText
+      cleanFert = 'Apply a small, balanced dose of Urea or DAP as per your local practice.'
+      cleanIrr = 'Water your field based on soil moisture and the current weather.'
+      bestCropName = viableCrops[0] ?? 'No crop available'
+
+      if (targetLang !== 'en') {
+        const [reasoning, fertilization_tip, irrigation_advice] = await Promise.all([
+          translateText(cleanSummary, targetLang),
+          translateText(cleanFert, targetLang),
+          translateText(cleanIrr, targetLang),
+        ])
+        translated = { reasoning, fertilization_tip, irrigation_advice }
+      }
+    } else if (recommendation.bestCrop) {
+      if (targetLang !== 'en') {
+        const [reasoning, fertilization_tip, irrigation_advice] = await Promise.all([
+          translateText(recommendation.bestCrop.summary, targetLang),
+          translateText(recommendation.bestCrop.fertilization_tip, targetLang),
+          translateText(recommendation.bestCrop.irrigation_advice, targetLang),
+        ])
+        translated = { reasoning, fertilization_tip, irrigation_advice }
+      }
+      cleanSummary = translated?.reasoning || recommendation.bestCrop.summary
+      cleanFert = translated?.fertilization_tip || recommendation.bestCrop.fertilization_tip
+      cleanIrr = translated?.irrigation_advice || recommendation.bestCrop.irrigation_advice
+      bestCropName = recommendation.bestCrop.cropName
+      suitabilityScore = recommendation.bestCrop.suitabilityScore
     }
 
-    const cleanSummary = translated?.reasoning || recommendation.bestCrop.summary
-    const cleanFert = translated?.fertilization_tip || recommendation.bestCrop.fertilization_tip
-    const cleanIrr = translated?.irrigation_advice || recommendation.bestCrop.irrigation_advice
-
-    const reasoningToSave = JSON.stringify({
+    const reasoningToSave = isLegacy ? cleanSummary : JSON.stringify({
       bestCrop: {
         ...recommendation.bestCrop,
         summary: cleanSummary,
@@ -316,9 +342,9 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
     // ── 7. Persist (best-effort; a write failure must not lose the result) ─
     const { error: insertError } = await supabase.from('recommendations').insert({
       user_id: userId,
-      crop_name: recommendation.bestCrop.cropName,
+      crop_name: bestCropName,
       reasoning: reasoningToSave,
-      confidence_score: recommendation.bestCrop.suitabilityScore / 100,
+      confidence_score: suitabilityScore / 100,
     })
 
     if (isDev) {
@@ -349,7 +375,7 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
     // must match the selected language — translate the English templates before
     // storing them. translateText() never throws (returns the original on
     // failure), so a translation outage degrades to English rather than erroring.
-    let recMessage = `🌾 Your crop recommendation is ready: ${recommendation.bestCrop.cropName}`
+    let recMessage = `🌾 Your crop recommendation is ready: ${bestCropName}`
     let drySpellMessage = '⚠️ Dry spell detected. Irrigation recommended for your crop.'
     if (targetLang !== 'en') {
       const [translatedRec, translatedDry] = await Promise.all([
@@ -387,19 +413,21 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
     // ── 9. Respond ────────────────────────────────────────────────────────
     console.log({ location: "route.ts success respond block", recommendation })
     return NextResponse.json({
-      crop_name: recommendation.bestCrop.cropName,
+      crop_name: bestCropName,
       reasoning: cleanSummary,
-      confidence_score: recommendation.bestCrop.suitabilityScore / 100,
+      confidence_score: suitabilityScore / 100,
       fertilization_tip: cleanFert,
       irrigation_advice: cleanIrr,
       is_dry_spell: weatherSummary.isDrySpell,
-      bestCrop: {
-        ...recommendation.bestCrop,
-        summary: cleanSummary,
-        fertilization_tip: cleanFert,
-        irrigation_advice: cleanIrr,
-      },
-      alternatives: recommendation.alternatives,
+      ...(!isLegacy && recommendation.bestCrop ? {
+        bestCrop: {
+          ...recommendation.bestCrop,
+          summary: cleanSummary,
+          fertilization_tip: cleanFert,
+          irrigation_advice: cleanIrr,
+        },
+        alternatives: recommendation.alternatives,
+      } : {}),
       // Present only when a non-English language was requested.
       ...(translated ? { translated } : {}),
       ...(recommendation.error ? { error: recommendation.error } : {}),

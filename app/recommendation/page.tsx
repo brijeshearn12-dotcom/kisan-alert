@@ -16,6 +16,7 @@ import { getCropTranslationKey } from '@/lib/i18n/translations'
 import { getSeasonForMonth } from '@/lib/season'
 import { computeIndex, estimateSoilMoisture, moistureLevelForPercent } from '@/lib/vegetationIndex'
 import EnvironmentalConditionsCard from '@/components/EnvironmentalConditionsCard'
+import { confidenceStyle } from '@/lib/confidence'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -988,18 +989,29 @@ export default function RecommendationPage() {
 
             {!submitting && result && (
               <>
-                <HeroRecommendationCard
-                  ref={resultRef}
-                  result={result}
-                  language={language}
-                  onReset={handleReset}
-                  soil={soil}
-                />
+                {result.bestCrop ? (
+                  <>
+                    <HeroRecommendationCard
+                      ref={resultRef}
+                      result={result}
+                      language={language}
+                      onReset={handleReset}
+                      soil={soil}
+                    />
 
-                <AlternativesCard
-                  result={result}
-                  language={language}
-                />
+                    <AlternativesCard
+                      result={result}
+                      language={language}
+                    />
+                  </>
+                ) : (
+                  <LegacyResultCard
+                    ref={resultRef}
+                    result={result}
+                    language={language}
+                    onReset={handleReset}
+                  />
+                )}
               </>
             )}
 
@@ -1036,7 +1048,7 @@ export default function RecommendationPage() {
             )}
 
             {/* Advanced Insights (Detailed AI Analysis) */}
-            {!submitting && result && (
+            {!submitting && result && result.bestCrop && (
               <AdvancedInsightsAccordions
                 result={result}
                 language={language}
@@ -1180,6 +1192,158 @@ const HeroRecommendationCard = forwardRef<
     )
   },
 )
+
+// ── Legacy Result Card (Fallback UI) ────────────────────────────────────────
+const LegacyResultCard = forwardRef<
+  HTMLElement,
+  { result: Recommendation; language: LanguageCode; onReset: () => void }
+>(
+  function LegacyResultCard({ result, language, onReset }, ref) {
+    const { t } = useLanguage()
+
+    let displayReasoning = result.reasoning
+    let displayFert = result.fertilization_tip
+    let displayIrr = result.irrigation_advice
+    let bestCropName = result.crop_name
+    let percent = Math.round(result.confidence_score * 100)
+
+    try {
+      const parsed = JSON.parse(result.reasoning)
+      if (parsed && parsed.bestCrop) {
+        bestCropName = parsed.bestCrop.cropName || bestCropName
+        percent = parsed.bestCrop.suitabilityScore || percent
+        displayReasoning = parsed.bestCrop.summary || displayReasoning
+        displayFert = parsed.bestCrop.fertilization_tip || displayFert
+        displayIrr = parsed.bestCrop.irrigation_advice || displayIrr
+      }
+    } catch {
+      // Keep as is
+    }
+
+    const confidence = confidenceStyle(result.confidence_score)
+
+    return (
+      <EntranceAnimation>
+        <section
+          ref={ref}
+          aria-live="polite"
+          aria-label="Recommendation result"
+          className="mt-8 overflow-hidden rounded-2xl border border-primary-green/20 bg-white shadow-md ring-1 ring-primary-green/5"
+        >
+          <div className="p-5 sm:p-6">
+            {/* Crop name + badge */}
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">
+                  {t('recommendation.result.recommendedCrop')}
+                </p>
+                <h2 className="mt-1.5 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+                  {t(getCropTranslationKey(bestCropName))}
+                </h2>
+              </div>
+              <span
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${confidence.bg} ${confidence.text} ${confidence.ring}`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${confidence.dot}`} />
+                {percent}%
+              </span>
+            </div>
+
+            {/* Confidence bar */}
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] font-medium text-slate-400 tracking-[0.07em] uppercase">{t('recommendation.result.confidence')}</span>
+                <span className={`text-[11px] font-semibold ${confidence.text}`}>
+                  {confidence.label === 'High confidence' ? t('disease.confidence.high') :
+                   confidence.label === 'Moderate confidence' ? t('disease.confidence.moderate') :
+                   confidence.label === 'Low confidence' ? t('disease.confidence.low') : confidence.label}
+                </span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-slate-100" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label={`${t('recommendation.result.confidence')}: ${percent}%`}>
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${confidence.bar}`}
+                  style={{ width: `${percent}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Reasoning */}
+            <div className="mt-5 border-t border-slate-100 pt-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">{t('recommendation.result.whyThisCrop')}</p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">{displayReasoning}</p>
+              <ListenButton
+                text={displayReasoning}
+                languageCode={toSpeechLocale(language)}
+              />
+            </div>
+
+            {/* Weather signal */}
+            <div className="mt-5">
+              {result.is_dry_spell ? (
+                <div className="flex items-start gap-2.5 rounded-xl border border-accent-amber/20 bg-accent-amber/5 p-3.5">
+                  <span className="mt-0.5 shrink-0 text-accent-amber">{WarningIcon}</span>
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">{t('recommendation.result.drySpell')}</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-slate-600">
+                      {t('recommendation.result.drySpellDetail')}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2.5 rounded-xl border border-slate-100 bg-slate-50 p-3.5">
+                  <span className="mt-0.5 shrink-0 text-primary-green">✔</span>
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">{t('recommendation.result.adequateRain')}</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+                      {t('recommendation.result.adequateRainDetail')}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {result.error && (
+              <p className="mt-4 text-xs leading-relaxed text-slate-400">
+                {t('recommendation.result.fallbackAdvice')}
+              </p>
+            )}
+          </div>
+
+          {/* Footer action */}
+          <div className="border-t border-slate-100 px-5 py-3.5 sm:px-6 bg-slate-50/50">
+            <button
+              type="button"
+              onClick={onReset}
+              className="flex items-center gap-1.5 text-xs font-medium text-slate-500 transition-colors hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 rounded"
+            >
+              {RefreshIcon}
+              {t('recommendation.result.tryDifferentSoil')}
+            </button>
+          </div>
+        </section>
+
+        {/* Detailed advice */}
+        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm p-4 sm:p-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <AdvisoryCard
+              emoji="🌱"
+              title={t('recommendation.advisory.fertilizationTip')}
+              body={displayFert?.trim() ? displayFert : t('recommendation.advisory.unavailable')}
+              languageCode={toSpeechLocale(language)}
+            />
+            <AdvisoryCard
+              emoji="💧"
+              title={t('recommendation.advisory.irrigationAdvice')}
+              body={displayIrr?.trim() ? displayIrr : t('recommendation.advisory.unavailable')}
+              languageCode={toSpeechLocale(language)}
+            />
+          </div>
+        </div>
+      </EntranceAnimation>
+    )
+  },
+)
+
 
 // ── Alternative Recommendations Card ────────────────────────────────────────
 function AlternativesCard({

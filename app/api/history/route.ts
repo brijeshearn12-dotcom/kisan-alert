@@ -68,11 +68,23 @@ export async function GET() {
 
     if (recRes.data) {
       recRes.data.forEach((row) => {
+        let details = row.reasoning || ''
+        try {
+          const parsed = JSON.parse(details)
+          if (parsed && parsed.bestCrop && parsed.bestCrop.summary) {
+            details = parsed.bestCrop.summary
+          } else if (parsed && parsed.originalSummary) {
+            details = parsed.originalSummary
+          }
+        } catch {
+          // It's a plain string, keep as is
+        }
+
         timeline.push({
           id: row.id,
           type: 'recommendation',
           title: row.crop_name || 'Crop Recommendation',
-          details: row.reasoning || '',
+          details: details,
           confidence_score: row.confidence_score,
           created_at: row.created_at,
         })

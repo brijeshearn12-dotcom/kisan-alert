@@ -464,7 +464,22 @@ export function RecommendationCard({ recommendation }: { recommendation: Recomme
         </div>
 
         {recommendation.reasoning && (
-          <p className="mt-4 text-sm leading-relaxed text-slate-600">{recommendation.reasoning}</p>
+          <p className="mt-4 text-sm leading-relaxed text-slate-600">
+            {(() => {
+              try {
+                const parsed = JSON.parse(recommendation.reasoning)
+                if (parsed && parsed.bestCrop && parsed.bestCrop.summary) {
+                  return parsed.bestCrop.summary
+                }
+                if (parsed && parsed.originalSummary) {
+                  return parsed.originalSummary
+                }
+              } catch {
+                // Not a JSON string
+              }
+              return recommendation.reasoning
+            })()}
+          </p>
         )}
       </div>
 

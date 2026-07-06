@@ -154,5 +154,18 @@ async function fetchLatestRecommendation(
     .limit(1)
     .maybeSingle<RecommendationRow>()
 
+  if (data && data.reasoning) {
+    try {
+      const parsed = JSON.parse(data.reasoning)
+      if (parsed && parsed.bestCrop && parsed.bestCrop.summary) {
+        data.reasoning = parsed.bestCrop.summary
+      } else if (parsed && parsed.originalSummary) {
+        data.reasoning = parsed.originalSummary
+      }
+    } catch {
+      // It's a plain string, keep as is
+    }
+  }
+
   return data ?? null
 }

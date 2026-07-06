@@ -26,9 +26,15 @@ export interface RankedCrop {
 }
 
 export interface CropRecommendation {
+  bestCrop?: RankedCrop
+  alternatives?: RankedCrop[]
+  error?: string
+  legacyReasoning?: string
+}
+
+export type CompleteRecommendation = CropRecommendation & {
   bestCrop: RankedCrop
   alternatives: RankedCrop[]
-  error?: string
 }
 
 /** Weather context the model uses to reason about the recommendation. */
@@ -56,7 +62,7 @@ const FALLBACK_REASONING =
 function buildFallback(
   viableCrops: string[],
   errorMessage: string,
-): CropRecommendation {
+): CompleteRecommendation {
   const bestCropName = viableCrops[0] ?? 'No crop available'
   const alt1Name = viableCrops[1] ?? (viableCrops[0] ?? 'No crop available')
   const alt2Name = viableCrops[2] ?? (viableCrops[0] ?? 'No crop available')
@@ -247,7 +253,7 @@ function normalizeRankedCrop(
 function normalizeModelOutput(
   parsed: unknown,
   viableCrops: string[],
-): CropRecommendation | null {
+): CompleteRecommendation | null {
   if (typeof parsed !== 'object' || parsed === null) return null
 
   const record = parsed as Record<string, unknown>
@@ -375,44 +381,18 @@ export async function getCropRecommendation(
     try {
       parsed = JSON.parse(stripCodeFences(text))
     } catch {
-      const fallback = buildFallback(
-        viableCrops,
-        'Gemini returned a response that was not valid JSON.',
-      )
-      let suffix = ""
-      if (soilMoisture < 30) {
-        suffix = " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
-      } else if (soilMoisture <= 60) {
-        suffix = " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
-      } else {
-        suffix = " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
+      return {
+        error: 'Gemini returned a response that was not valid JSON.',
+        legacyReasoning: text,
       }
-      if (targetLang !== 'en') {
-        suffix = await translateText(suffix, targetLang as TargetLang)
-      }
-      fallback.bestCrop.irrigation_advice += suffix
-      return fallback
     }
 
     const normalized = normalizeModelOutput(parsed, viableCrops)
     if (!normalized) {
-      const fallback = buildFallback(
-        viableCrops,
-        'Gemini returned a malformed or out-of-list recommendation.',
-      )
-      let suffix = ""
-      if (soilMoisture < 30) {
-        suffix = " High irrigation required due to dry soil conditions. Soil moisture: " + soilMoisture + "%";
-      } else if (soilMoisture <= 60) {
-        suffix = " Moderate irrigation recommended. Soil moisture: " + soilMoisture + "%";
-      } else {
-        suffix = " Low irrigation needed. Soil moisture sufficient: " + soilMoisture + "%";
+      return {
+        error: 'Gemini returned a malformed or out-of-list recommendation.',
+        legacyReasoning: text,
       }
-      if (targetLang !== 'en') {
-        suffix = await translateText(suffix, targetLang as TargetLang)
-      }
-      fallback.bestCrop.irrigation_advice += suffix
-      return fallback
     }
 
     let suffix = ""

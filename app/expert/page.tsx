@@ -306,7 +306,14 @@ export default function ExpertDashboardPage() {
                       <div className="mt-4 border-t border-slate-100 pt-4 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">{t('expert.rskFeedback')}</h4>
                         <p className="mt-1.5 text-xs leading-relaxed text-slate-700">
-                          {record.expert_notes}
+                          {(() => {
+                            try {
+                              const parsed = JSON.parse(record.expert_notes)
+                              return parsed.notes || parsed.treatment || record.expert_notes
+                            } catch {
+                              return record.expert_notes
+                            }
+                          })()}
                         </p>
                       </div>
                     )}

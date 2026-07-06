@@ -42,6 +42,12 @@ interface VegetationIndexCardProps {
   /** Shared soil moisture (0-100), lifted so the parent HUD can display it. */
   soilMoisture: number
   onSoilMoistureChange: (value: number) => void
+  /**
+   * Hide the built-in soil-moisture slider when the parent already renders one
+   * (e.g. inside the recommendation form). The value stays controlled via
+   * `soilMoisture`/`onSoilMoistureChange`, so scoring is unaffected.
+   */
+  hideSlider?: boolean
   /** Bubble updates back to the parent so the HUD card can display them in sync. */
   onIndexChange?: (score: number, status: VegetationStatus) => void
   onAdviceChange?: (advice: string, loading: boolean) => void
@@ -175,6 +181,7 @@ export default function VegetationIndexCard({
   onSoilMoistureChange,
   onIndexChange,
   onAdviceChange,
+  hideSlider = false,
 }: VegetationIndexCardProps) {
   const { t, language } = useLanguage()
 
@@ -420,8 +427,11 @@ export default function VegetationIndexCard({
           )}
         </div>
 
-        {/* Soil moisture slider (reused component) */}
-        <SoilMoistureSlider value={soilMoisture} onChange={onSoilMoistureChange} />
+        {/* Soil moisture slider (reused component). Hidden when the parent form
+            already owns the slider, so the reading isn't duplicated. */}
+        {!hideSlider && (
+          <SoilMoistureSlider value={soilMoisture} onChange={onSoilMoistureChange} />
+        )}
 
         {/* Animated field illustration */}
         <div className="mt-5">

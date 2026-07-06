@@ -8,10 +8,8 @@ import { confidenceStyle } from '@/lib/confidence'
 import { EntranceAnimation } from '@/components/EntranceAnimation'
 import { EmptyState } from '@/components/EmptyState'
 import { ListenButton } from '@/components/ListenButton'
-import SatelliteMap from '@/components/SatelliteMap'
 import VegetationIndexCard from '@/components/VegetationIndexCard'
-import IndiaMap from '@/components/IndiaMap'
-import DistrictInfoCard from '@/components/DistrictInfoCard'
+import SoilMoistureSlider from '@/components/SoilMoistureSlider'
 import DemoPresetChips from '@/components/DemoPresetChips'
 import type { CurrentWeather } from '@/lib/weather'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -226,10 +224,6 @@ export default function RecommendationPage() {
   const [weatherLoading, setWeatherLoading] = useState(false)
   const [weatherFetchedAt, setWeatherFetchedAt] = useState<Date | null>(null)
   const [soilMoisture, setSoilMoisture] = useState(50)
-  const [vegetationScore, setVegetationScore] = useState<number | null>(null)
-  const [vegetationStatus, setVegetationStatus] = useState<string | null>(null)
-  const [vegetationAdvice, setVegetationAdvice] = useState<string | null>(null)
-  const [vegetationAdviceLoading, setVegetationAdviceLoading] = useState(false)
 
   // Fetch weather at page level when selected district coordinates change
   useEffect(() => {
@@ -473,128 +467,83 @@ export default function RecommendationPage() {
               submitting={submitting}
             />
 
-            {/* State */}
-            <section className="mb-6">
-              <label htmlFor="state" className="mb-1.5 block text-sm font-medium text-slate-700">
-                {t('recommendation.form.state')}
-              </label>
-              <div className="relative">
-                <select
-                  id="state"
-                  value={selectedState}
-                  onChange={(e) => {
-                    const nextState = e.target.value
-                    setSelectedState(nextState)
-                    // Auto-select the first district in the new state
-                    const firstInState = districts.find((d) => d.state === nextState)
-                    if (firstInState) {
-                      setDistrictId(firstInState.id)
-                    }
-                  }}
-                  className="w-full appearance-none rounded-lg border border-slate-200 bg-white py-2.5 pl-3.5 pr-10 text-sm text-slate-900 shadow-sm transition-colors hover:border-slate-300 focus:border-primary-green focus:outline-none focus:ring-4 focus:ring-primary-green/10"
-                >
-                  {states.map((st) => (
-                    <option key={st} value={st}>
-                      {st}
-                    </option>
-                  ))}
-                </select>
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                  {ChevronIcon}
-                </span>
+            {/* ── SECTION 3: Recommendation form ──────────────────────────────
+                A single, scannable card: location → soil → moisture → CTA.
+                This is the only thing competing for attention before a result
+                exists. */}
+            <section
+              aria-label={t('recommendation.cropAdvisory')}
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+            >
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                {/* State */}
+                <div>
+                  <label htmlFor="state" className="mb-1.5 block text-sm font-medium text-slate-700">
+                    {t('recommendation.form.state')}
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="state"
+                      value={selectedState}
+                      onChange={(e) => {
+                        const nextState = e.target.value
+                        setSelectedState(nextState)
+                        // Auto-select the first district in the new state
+                        const firstInState = districts.find((d) => d.state === nextState)
+                        if (firstInState) {
+                          setDistrictId(firstInState.id)
+                        }
+                      }}
+                      className="w-full appearance-none rounded-lg border border-slate-200 bg-white py-2.5 pl-3.5 pr-10 text-sm text-slate-900 shadow-sm transition-colors hover:border-slate-300 focus:border-primary-green focus:outline-none focus:ring-4 focus:ring-primary-green/10"
+                    >
+                      {states.map((st) => (
+                        <option key={st} value={st}>
+                          {st}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                      {ChevronIcon}
+                    </span>
+                  </div>
+                </div>
+
+                {/* District */}
+                <div>
+                  <label htmlFor="district" className="mb-1.5 block text-sm font-medium text-slate-700">
+                    {t('recommendation.form.district')}
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="district"
+                      value={districtId}
+                      onChange={(e) => setDistrictId(e.target.value)}
+                      className="w-full appearance-none rounded-lg border border-slate-200 bg-white py-2.5 pl-3.5 pr-10 text-sm text-slate-900 shadow-sm transition-colors hover:border-slate-300 focus:border-primary-green focus:outline-none focus:ring-4 focus:ring-primary-green/10"
+                    >
+                      {filteredDistricts.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                      {ChevronIcon}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </section>
 
-            {/* District */}
-            <section className="mb-6">
-              <label htmlFor="district" className="mb-1.5 block text-sm font-medium text-slate-700">
-                {t('recommendation.form.district')}
-              </label>
-              <div className="relative">
-                <select
-                  id="district"
-                  value={districtId}
-                  onChange={(e) => setDistrictId(e.target.value)}
-                  className="w-full appearance-none rounded-lg border border-slate-200 bg-white py-2.5 pl-3.5 pr-10 text-sm text-slate-900 shadow-sm transition-colors hover:border-slate-300 focus:border-primary-green focus:outline-none focus:ring-4 focus:ring-primary-green/10"
+              {/* Soil selection — compact chips (icon + label). Descriptions were
+                  removed to keep the form scannable; the radio semantics stay. */}
+              <fieldset className="mt-5">
+                <legend className="mb-2.5 text-sm font-medium text-slate-700">
+                  {t('recommendation.form.soilType')}
+                </legend>
+                <div
+                  role="radiogroup"
+                  aria-label={t('recommendation.form.soilType')}
+                  className="grid grid-cols-2 gap-2 sm:grid-cols-3"
                 >
-                  {filteredDistricts.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                  {ChevronIcon}
-                </span>
-              </div>
-            </section>
-
-            {/* GIS Centerpiece Map and HUD */}
-            <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <IndiaMap
-                districts={districts}
-                selectedState={selectedState}
-                selectedDistrictId={districtId}
-                onStateSelect={(stateName) => {
-                  setSelectedState(stateName)
-                  const firstInState = districts.find((d) => d.state === stateName)
-                  if (firstInState) {
-                    setDistrictId(firstInState.id)
-                  }
-                }}
-                onDistrictSelect={(distId) => {
-                  setDistrictId(distId)
-                }}
-              />
-              <DistrictInfoCard
-                districtName={selectedDistrict?.name ?? ''}
-                stateName={selectedDistrict?.state ?? ''}
-                soilType={soil}
-                weather={weather}
-                weatherLoading={weatherLoading}
-                vegetationScore={vegetationScore}
-                vegetationStatus={vegetationStatus}
-                aiAdvisory={vegetationAdvice}
-                aiAdvisoryLoading={vegetationAdviceLoading}
-                recommendedCrop={result?.crop_name ?? null}
-                recommendationConfidence={result?.confidence_score ?? null}
-              />
-            </div>
-
-            <SatelliteMap
-              latitude={selectedDistrict?.latitude ?? null}
-              longitude={selectedDistrict?.longitude ?? null}
-              districtName={selectedDistrict ? `${selectedDistrict.name}, ${selectedDistrict.state}` : ''}
-            />
-
-            {/* Vegetation & Moisture Index — hero feature. Estimates field
-                health from live 7-day rainfall + a manual soil-moisture reading;
-                independent of the crop-recommendation flow below. */}
-            <VegetationIndexCard
-              latitude={selectedDistrict?.latitude ?? null}
-              longitude={selectedDistrict?.longitude ?? null}
-              districtName={selectedDistrict?.name ?? ''}
-              stateName={selectedDistrict?.state ?? ''}
-              externalWeather={weather}
-              externalWeatherLoading={weatherLoading}
-              externalFetchedAt={weatherFetchedAt}
-              soilMoisture={soilMoisture}
-              onSoilMoistureChange={setSoilMoisture}
-              onIndexChange={(score, status) => {
-                setVegetationScore(score)
-                setVegetationStatus(status)
-              }}
-              onAdviceChange={(advice, loading) => {
-                setVegetationAdvice(advice)
-                setVegetationAdviceLoading(loading)
-              }}
-            />
-
-            {/* Soil selection */}
-            <section className="mb-7">
-              <fieldset>
-                <legend className="mb-2.5 text-sm font-medium text-slate-700">{t('recommendation.form.soilType')}</legend>
-                <div role="radiogroup" aria-label={t('recommendation.form.soilType')} className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                   {SOIL_TYPES.map((option) => {
                     const selected = soil === option.id
                     const detail = SOIL_DETAILS[option.id]
@@ -604,75 +553,74 @@ export default function RecommendationPage() {
                         type="button"
                         role="radio"
                         aria-checked={selected}
+                        title={t(`soil.${option.id}.desc` as TranslationKey)}
                         onClick={() => setSoil(option.id)}
                         className={[
-                          'group relative flex items-start gap-3 rounded-xl border p-4 text-left transition-all duration-200',
+                          'group flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all duration-200',
                           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 focus-visible:ring-offset-1',
                           selected
-                            ? 'border-primary-green bg-primary-green/5 shadow-sm ring-1 ring-primary-green/10'
+                            ? 'border-primary-green bg-primary-green/5 ring-1 ring-primary-green/10'
                             : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50',
                         ].join(' ')}
                       >
                         <span
                           className={[
-                            'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors',
+                            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors',
                             selected
                               ? 'bg-primary-green/10 text-primary-green'
                               : 'bg-slate-100 text-slate-500 group-hover:text-slate-600',
                           ].join(' ')}
                         >
-                          <span className="h-5 w-5">{detail.icon}</span>
+                          <span className="h-[18px] w-[18px]">{detail.icon}</span>
                         </span>
-
-                        <span className="min-w-0 flex-1 pt-0.5">
-                          <span className="block text-sm font-medium text-slate-900">
-                            {t(`soil.${option.id}.label` as TranslationKey)}
+                        <span className="min-w-0 flex-1 text-[13px] font-medium leading-tight text-slate-800">
+                          {t(`soil.${option.id}.label` as TranslationKey)}
+                        </span>
+                        {selected && (
+                          <span
+                            className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary-green text-white"
+                            aria-hidden="true"
+                          >
+                            {CheckIcon}
                           </span>
-                          <span className="mt-0.5 block text-xs leading-relaxed text-slate-500">
-                            {t(`soil.${option.id}.desc` as TranslationKey)}
-                          </span>
-                        </span>
-
-                        <span
-                          className={[
-                            'absolute right-3 top-3 flex h-4 w-4 items-center justify-center rounded-full text-white transition-all duration-200',
-                            selected ? 'scale-100 bg-primary-green opacity-100' : 'scale-75 opacity-0',
-                          ].join(' ')}
-                          aria-hidden="true"
-                        >
-                          {CheckIcon}
-                        </span>
+                        )}
                       </button>
                     )
                   })}
                 </div>
               </fieldset>
-            </section>
 
-            {/* Generate */}
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={handleGenerate}
-                disabled={!canGenerate}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary-green text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-green/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
-              >
-                {submitting ? (
-                  <>
-                    <LoadingDots />
-                    <span>{t('recommendation.form.generating')}</span>
-                  </>
-                ) : (
-                  t('recommendation.form.generateBtn')
+              {/* Soil moisture — moved into the form so the reading lives with the
+                  other inputs (the Vegetation card reuses this same value). */}
+              <div className="mt-5">
+                <SoilMoistureSlider value={soilMoisture} onChange={setSoilMoisture} bare />
+              </div>
+
+              {/* Generate — the single primary CTA on the page. */}
+              <div className="mt-6 space-y-2">
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={!canGenerate}
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary-green text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-green/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+                >
+                  {submitting ? (
+                    <>
+                      <LoadingDots />
+                      <span>{t('recommendation.form.generating')}</span>
+                    </>
+                  ) : (
+                    t('recommendation.form.generateBtn')
+                  )}
+                </button>
+
+                {!soil && (
+                  <p className="text-center text-xs text-slate-400">
+                    {t('recommendation.form.selectSoilPrompt')}
+                  </p>
                 )}
-              </button>
-
-              {!soil && (
-                <p className="text-center text-xs text-slate-400">
-                  {t('recommendation.form.selectSoilPrompt')}
-                </p>
-              )}
-            </div>
+              </div>
+            </section>
 
             {/* Error */}
             {formError && (
@@ -686,10 +634,9 @@ export default function RecommendationPage() {
               </div>
             )}
 
-            {/* Loading skeleton */}
+            {/* ── SECTION 4: Hero recommendation (revealed after Generate) ───── */}
             {submitting && <ResultSkeleton />}
 
-            {/* Result */}
             {!submitting && result && (
               <ResultCard
                 ref={resultRef}
@@ -697,6 +644,43 @@ export default function RecommendationPage() {
                 language={language}
                 onReset={handleReset}
               />
+            )}
+
+            {/* ── SECTION 5: Supporting environmental data (below the hero) ────
+                Weather + vegetation index. Revealed once a district is chosen;
+                kept visually quieter than the recommendation above. */}
+            {selectedDistrict && (
+              <section aria-label={t('recommendation.section.environmental')} className="mt-10">
+                <div className="mb-4">
+                  <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-500">
+                    {t('recommendation.section.environmental')}
+                  </h2>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {t('recommendation.section.environmentalHint')}
+                  </p>
+                </div>
+
+                {/* Compact live-weather strip (reuses the page-level weather). */}
+                <WeatherSummary weather={weather} loading={weatherLoading} />
+
+                {/* Vegetation & moisture index — collapsed by default so its
+                    depth of detail never competes with the recommendation. Its
+                    slider is hidden (the form owns the shared value). */}
+                <Accordion title={t('veg.indexTitle')} className="mt-4">
+                  <VegetationIndexCard
+                    latitude={selectedDistrict?.latitude ?? null}
+                    longitude={selectedDistrict?.longitude ?? null}
+                    districtName={selectedDistrict?.name ?? ''}
+                    stateName={selectedDistrict?.state ?? ''}
+                    externalWeather={weather}
+                    externalWeatherLoading={weatherLoading}
+                    externalFetchedAt={weatherFetchedAt}
+                    soilMoisture={soilMoisture}
+                    onSoilMoistureChange={setSoilMoisture}
+                    hideSlider
+                  />
+                </Accordion>
+              </section>
             )}
           </>
         )}
@@ -727,7 +711,7 @@ const ResultCard = forwardRef<
           ref={ref}
           aria-live="polite"
           aria-label="Recommendation result"
-          className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+          className="mt-8 overflow-hidden rounded-2xl border border-primary-green/20 bg-white shadow-md ring-1 ring-primary-green/5"
         >
           <div className="p-5 sm:p-6">
             {/* Crop name + badge */}
@@ -736,7 +720,7 @@ const ResultCard = forwardRef<
                 <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">
                   {t('recommendation.result.recommendedCrop')}
                 </p>
-                <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-900">
+                <h2 className="mt-1.5 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
                   {t(getCropTranslationKey(result.crop_name))}
                 </h2>
               </div>
@@ -821,22 +805,24 @@ const ResultCard = forwardRef<
           </div>
         </section>
 
-        {/* Advisory cards — sit directly below the recommendation card and share
-            its spacing, radius, and subtle green theme. */}
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <AdvisoryCard
-            emoji="🌱"
-            title={t('recommendation.advisory.fertilizationTip')}
-            body={fields.fertilization_tip?.trim() ? fields.fertilization_tip : t('recommendation.advisory.unavailable')}
-            languageCode={toSpeechLocale(language)}
-          />
-          <AdvisoryCard
-            emoji="💧"
-            title={t('recommendation.advisory.irrigationAdvice')}
-            body={fields.irrigation_advice?.trim() ? fields.irrigation_advice : t('recommendation.advisory.unavailable')}
-            languageCode={toSpeechLocale(language)}
-          />
-        </div>
+        {/* Detailed advice — collapsed by default so the hero stays uncluttered.
+            Consolidates the fertilization + irrigation advisories in one place. */}
+        <Accordion title={t('recommendation.detailedAdvice')} className="mt-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <AdvisoryCard
+              emoji="🌱"
+              title={t('recommendation.advisory.fertilizationTip')}
+              body={fields.fertilization_tip?.trim() ? fields.fertilization_tip : t('recommendation.advisory.unavailable')}
+              languageCode={toSpeechLocale(language)}
+            />
+            <AdvisoryCard
+              emoji="💧"
+              title={t('recommendation.advisory.irrigationAdvice')}
+              body={fields.irrigation_advice?.trim() ? fields.irrigation_advice : t('recommendation.advisory.unavailable')}
+              languageCode={toSpeechLocale(language)}
+            />
+          </div>
+        </Accordion>
       </EntranceAnimation>
     )
   },
@@ -878,6 +864,89 @@ function AdvisoryCard({
         <ListenButton text={body} languageCode={languageCode} />
       )}
     </section>
+  )
+}
+
+// ── Accordion (collapsed by default; keyboard + SR friendly) ─────────────────
+
+/**
+ * A generic disclosure used to keep secondary detail out of the primary flow.
+ * Follows the app's existing `aria-expanded` pattern (see VegetationIndexCard).
+ */
+function Accordion({
+  title,
+  children,
+  className = '',
+}: {
+  title: string
+  children: ReactNode
+  className?: string
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className={`overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ${className}`}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 px-5 py-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 sm:px-6"
+      >
+        <span className="text-sm font-medium text-slate-700">{title}</span>
+        <span className={`text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
+          {ChevronIcon}
+        </span>
+      </button>
+      {open && <div className="border-t border-slate-100 p-4 sm:p-5">{children}</div>}
+    </div>
+  )
+}
+
+// ── Weather summary strip (compact, reuses the page-level weather) ───────────
+
+function WeatherSummary({
+  weather,
+  loading,
+}: {
+  weather: CurrentWeather | null
+  loading: boolean
+}) {
+  const { t, language } = useLanguage()
+
+  const metrics: { label: string; value: string }[] = weather
+    ? [
+        { label: t('hud.temp'), value: `${formatNumber(Math.round(weather.temperature), language)}°C` },
+        { label: t('hud.humidity'), value: `${formatNumber(Math.round(weather.humidity), language)}%` },
+        { label: t('hud.rain'), value: `${formatNumber(weather.rainfall, language)} mm` },
+      ]
+    : []
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">
+        {t('veg.liveWeather')}
+      </p>
+      {loading ? (
+        <div className="grid grid-cols-3 gap-3" aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-12 animate-pulse rounded-xl bg-slate-100" />
+          ))}
+        </div>
+      ) : weather ? (
+        <div className="grid grid-cols-3 gap-3">
+          {metrics.map((m) => (
+            <div
+              key={m.label}
+              className="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-slate-50/60 px-2 py-2.5 text-center"
+            >
+              <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{m.label}</span>
+              <span className="mt-1 text-sm font-semibold tabular-nums text-slate-900">{m.value}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-slate-400">{t('veg.rainfallUnavailable')}</p>
+      )}
+    </div>
   )
 }
 

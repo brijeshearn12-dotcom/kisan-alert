@@ -6,11 +6,17 @@ import { formatNumber } from '@/lib/i18n/translations'
 interface SoilMoistureSliderProps {
   value: number
   onChange: (value: number) => void
+  /**
+   * Render without the outer card chrome (border / shadow / padding) so the
+   * slider can sit inside another card — e.g. the recommendation form.
+   */
+  bare?: boolean
 }
 
 export default function SoilMoistureSlider({
   value,
   onChange,
+  bare = false,
 }: SoilMoistureSliderProps) {
   const { t, language } = useLanguage()
 
@@ -30,7 +36,7 @@ export default function SoilMoistureSlider({
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className={bare ? '' : 'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm'}>
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
           {t('soil.moisture.sensor')}

@@ -53,12 +53,10 @@ export async function POST(request: Request) {
 }
 
 export async function handleRecommendationGeneration(request: Request, isTestRoute = false) {
-  console.log("USING UPDATED ROUTE")
   try {
     const isDev = process.env.NODE_ENV === 'development'
 
     if (isTestRoute && !isDev) {
-      console.log({ location: "route.ts line 56", isTestRoute, isDev })
       return errorResponse('Method Not Allowed', 405)
     }
 
@@ -69,7 +67,6 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
         body = await request.json()
       } catch {
         if (!isDev) {
-          console.log({ location: "route.ts line 68", isDev })
           return errorResponse('Request body must be valid JSON.', 400)
         }
       }
@@ -137,7 +134,6 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
         }
 
         if (!firstDistrict || firstDistrict.length === 0) {
-          console.log({ location: "route.ts line 133 (firstDistrict empty)", firstDistrict })
           return errorResponse('Database contains no districts.', 400)
         }
         finalDistrictId = firstDistrict[0].id
@@ -150,15 +146,12 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
     }
 
     if (!finalDistrictId) {
-      console.log({ location: "route.ts line 146", finalDistrictId })
       return errorResponse('Missing required field: district_id', 400)
     }
     if (!finalSoilType) {
-      console.log({ location: "route.ts line 150", finalSoilType })
       return errorResponse('Missing required field: soil_type', 400)
     }
     if (!VALID_SOIL_IDS.has(finalSoilType)) {
-      console.log({ location: "route.ts line 154", finalSoilType })
       return errorResponse('Invalid soil_type.', 400)
     }
 
@@ -175,7 +168,6 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
       } = await supabase.auth.getUser()
 
       if (!isDev && (authError || !user)) {
-        console.log({ location: "route.ts line 170 (auth required in prod)", authError, user })
         return errorResponse('You must be logged in to request a recommendation.', 401)
       }
 
@@ -188,7 +180,6 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
     }
 
     if (!userId) {
-      console.log({ location: "route.ts line 183", userId })
       return errorResponse('You must be logged in to request a recommendation.', 401)
     }
 
@@ -211,26 +202,20 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
           .select('*', { count: 'exact', head: true })
 
         if (countErr) {
-          console.log({ location: "route.ts line 208", countErr })
           return errorResponse(`Supabase query failed: ${countErr.message}`, 500)
         }
         if (count === 0) {
-          console.log({ location: "route.ts line 212", count })
           return errorResponse('Database contains no districts.', 400)
         }
-        console.log({ location: "route.ts line 215", districtError })
         return errorResponse('District not found.', 404)
       }
-      console.log({ location: "route.ts line 218", districtError })
       return errorResponse(`Supabase query failed: ${districtError.message}`, 500)
     }
 
     if (!district) {
-      console.log({ location: "route.ts line 223", district })
       return errorResponse('District not found.', 404)
     }
     if (district.latitude === null || district.longitude === null) {
-      console.log({ location: "route.ts line 227", district })
       return errorResponse('District is missing location coordinates.', 422)
     }
 
@@ -240,7 +225,6 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
     const viableCrops = [...getViableCrops(finalSoilType, season)]
 
     if (viableCrops.length === 0) {
-      console.log({ location: "route.ts line 237", finalSoilType, season, viableCrops })
       return errorResponse(
         `No viable crops are available for ${finalSoilType} soil during the ${season} season.`,
         422,
@@ -436,7 +420,6 @@ export async function handleRecommendationGeneration(request: Request, isTestRou
     const message =
       error instanceof Error ? error.message : 'Unexpected server error.'
     console.error('Recommendation route error:', message)
-    console.log({ location: "route.ts line 324 catch block", error })
     return errorResponse('Something went wrong while generating the recommendation.', 500)
   }
 }

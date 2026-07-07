@@ -72,6 +72,7 @@ export default function ExpertDashboardPage() {
   const [authState, setAuthState] = useState<'loading' | 'unauthenticated' | 'forbidden' | 'authorized'>('loading')
   const [cases, setCases] = useState<CaseRecord[]>([])
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'pending' | 'resolved'>('pending')
 
   useEffect(() => {
     let active = true
@@ -158,6 +159,23 @@ export default function ExpertDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase])
 
+  const pendingCases = useMemo(() => {
+    return cases.filter((c) => c.status === 'pending')
+  }, [cases])
+
+  const resolvedCases = useMemo(() => {
+    return cases.filter((c) => c.status === 'resolved')
+  }, [cases])
+
+  const resolvedTodayCount = useMemo(() => {
+    const today = new Date().toDateString()
+    return cases.filter(
+      (c) => c.status === 'resolved' && c.resolved_at && new Date(c.resolved_at).toDateString() === today
+    ).length
+  }, [cases])
+
+  const visibleCases = activeTab === 'pending' ? pendingCases : resolvedCases
+
   if (loading) {
     return (
       <main className="min-h-screen bg-canvas font-sans flex items-center justify-center p-5">
@@ -206,7 +224,7 @@ export default function ExpertDashboardPage() {
 
       <div className="mx-auto w-full max-w-5xl px-5 py-10 sm:px-6 sm:py-12">
         {/* Header section */}
-        <header className="mb-10 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <header className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
               {t('expert.escalatedCases')}
@@ -220,10 +238,46 @@ export default function ExpertDashboardPage() {
               {t('expert.totalCases', { count: cases.length })}
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-lg bg-accent-amber/5 px-3 py-1.5 text-xs font-semibold text-accent-amber ring-1 ring-inset ring-accent-amber/20">
-              {t('expert.pendingCount', { count: cases.filter((c) => c.status === 'pending').length })}
+              {t('expert.pendingCount', { count: pendingCases.length })}
             </span>
           </div>
         </header>
+
+        {/* Tab switcher */}
+        <div className="flex border-b border-slate-200 mb-8 gap-6">
+          <button
+            onClick={() => setActiveTab('pending')}
+            className={`pb-4 text-sm font-semibold relative transition-colors focus:outline-none ${
+              activeTab === 'pending' ? 'text-primary-green font-bold' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            {t('expert.status.pending')}
+            <span className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+              activeTab === 'pending' ? 'bg-primary-green/10 text-primary-green' : 'bg-slate-100 text-slate-600'
+            }`}>
+              {pendingCases.length}
+            </span>
+            {activeTab === 'pending' && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-green rounded-full" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('resolved')}
+            className={`pb-4 text-sm font-semibold relative transition-colors focus:outline-none ${
+              activeTab === 'resolved' ? 'text-primary-green font-bold' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            {t('expert.status.resolved')}
+            <span className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+              activeTab === 'resolved' ? 'bg-primary-green/10 text-primary-green' : 'bg-slate-100 text-slate-600'
+            }`}>
+              {resolvedCases.length}
+            </span>
+            {activeTab === 'resolved' && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-green rounded-full" />
+            )}
+          </button>
+        </div>
 
         {errorMsg && (
           <ErrorState
@@ -232,17 +286,40 @@ export default function ExpertDashboardPage() {
           />
         )}
 
-        {!errorMsg && cases.length === 0 && (
-          <EmptyState
-            icon={<span className="mx-auto block text-slate-300 w-fit">{ShieldAlertIcon}</span>}
-            title={t('expert.noCases')}
-            description={t('expert.noCasesDetail')}
-          />
+        {!errorMsg && visibleCases.length === 0 && (
+          activeTab === 'pending' ? (
+            <div className="flex flex-col items-center justify-center p-10 bg-white border border-slate-200 rounded-3xl shadow-sm text-center max-w-lg mx-auto my-12 transition-all duration-300">
+              <div className="relative mb-6 flex items-center justify-center w-20 h-20 rounded-full bg-emerald-50 border border-emerald-100 animate-pulse">
+                <div className="absolute inset-0 rounded-full bg-primary-green/10 animate-ping opacity-75" style={{ animationDuration: '3s' }} />
+                <svg className="w-10 h-10 text-primary-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">{t('expert.empty.title')}</h3>
+              <p className="text-sm leading-relaxed text-slate-500 max-w-sm mb-4">{t('expert.empty.description')}</p>
+              {resolvedTodayCount > 0 && (
+                <div className="px-4 py-2 bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-full border border-emerald-100/60 inline-flex items-center gap-1.5">
+                  <span>🎉</span>
+                  <span>
+                    {resolvedTodayCount === 1
+                      ? t('expert.empty.todaySummary', { count: 1 })
+                      : t('expert.empty.todaySummaryPlural', { count: resolvedTodayCount })}
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <EmptyState
+              icon={<span className="mx-auto block text-slate-300 w-fit">{ShieldAlertIcon}</span>}
+              title={t('expert.noCases')}
+              description={t('expert.noCasesDetail')}
+            />
+          )
         )}
 
         {/* Cases Grid */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {cases.map((record) => {
+          {visibleCases.map((record) => {
             const check = record.disease_checks
             const farmer = check?.users
             const isPending = record.status === 'pending'
@@ -288,7 +365,15 @@ export default function ExpertDashboardPage() {
                     </div>
 
                     <h3 className="mt-2.5 text-base font-bold text-slate-900 line-clamp-1">
-                      {check?.diagnosis || t('expert.unknownDisease')}
+                      {(() => {
+                        if (record.expert_notes) {
+                          try {
+                            const parsed = JSON.parse(record.expert_notes)
+                            if (parsed.diagnosis) return parsed.diagnosis
+                          } catch {}
+                        }
+                        return check?.diagnosis || t('expert.unknownDisease')
+                      })()}
                     </h3>
 
                     <p className="mt-1.5 text-xs text-slate-500">

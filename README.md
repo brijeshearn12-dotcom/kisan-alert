@@ -91,24 +91,24 @@ Kisan Alert offers a unified, safe, and collaborative climate-resilient workflow
     <tr>
       <td width="50%" align="center">
         <strong>Farmer Dashboard</strong><br />
-        <img src="https://placehold.co/600x400/10b981/ffffff?text=Farmer+Dashboard+UI" alt="Farmer Dashboard" /><br />
+        <img src="public/screenshots/dashboard.png" alt="Farmer Dashboard" width="100%" /><br />
         <em>Overview of weather, indices, and alerts</em>
       </td>
       <td width="50%" align="center">
         <strong>Crop Recommendation</strong><br />
-        <img src="https://placehold.co/600x400/10b981/ffffff?text=Crop+Advisory+UI" alt="Crop Recommendation" /><br />
+        <img src="public/screenshots/crop_recommendation.png" alt="Crop Recommendation" width="100%" /><br />
         <em>Ranked crop choices & suitability reasoning</em>
       </td>
     </tr>
     <tr>
       <td width="50%" align="center">
         <strong>Disease Check Upload</strong><br />
-        <img src="https://placehold.co/600x400/10b981/ffffff?text=Disease+Check+UI" alt="Disease Check" /><br />
+        <img src="public/screenshots/disease_diagnosis.png" alt="Disease Check" width="100%" /><br />
         <em>Leaf image scanning and voice diagnosis</em>
       </td>
       <td width="50%" align="center">
         <strong>Expert Portal</strong><br />
-        <img src="https://placehold.co/600x400/10b981/ffffff?text=Expert+Portal+UI" alt="Expert Portal" /><br />
+        <img src="public/screenshots/expert_dashboard.png" alt="Expert Portal" width="100%" /><br />
         <em>Professional consultation workspace</em>
       </td>
     </tr>
@@ -405,3 +405,10 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 
 ### 👨‍💻 Gaurav Sharma — Full Stack Developer
 * **Responsibilities:** Frontend Development, API Integration (Open-Meteo & Google Cloud Proxies), Feature implementation, testing, QA, and UI/UX optimization.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+

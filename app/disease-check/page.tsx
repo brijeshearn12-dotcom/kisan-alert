@@ -799,7 +799,7 @@ export default function DiseaseCheckPage() {
                                 : 'bg-emerald-50 text-emerald-700 ring-emerald-600/10 dark:bg-emerald-950/20 dark:text-emerald-400'
                           return (
                             <span className={`inline-flex items-center rounded-full px-2.5 py-1.5 text-xs font-semibold ring-1 ring-inset ${classes} uppercase tracking-wider`}>
-                              {t(`disease.severity.${sev.toLowerCase()}` as TranslationKey)} Severity
+                              {t(`disease.severity.${sev.toLowerCase()}` as TranslationKey)} {language === 'gu' ? 'તીવ્રતા' : language === 'hi' ? 'तीव्रता' : language === 'mr' ? 'तीव्रता' : language === 'kn' ? 'ತೀವ್ರತೆ' : language === 'ta' ? 'தீவிரம்' : language === 'te' ? 'తీవ్రత' : language === 'bn' ? 'তীব্রতা' : 'Severity'}
                             </span>
                           )
                         })()

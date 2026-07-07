@@ -95,7 +95,7 @@ export default function HistoryPage() {
       }
 
       try {
-        const response = await fetch('/api/history', { cache: 'no-store' })
+        const response = await fetch(`/api/history?lang=${language}`, { cache: 'no-store' })
         if (!active) return
         if (!response.ok) throw new Error('Failed to fetch history')
 
@@ -114,7 +114,7 @@ export default function HistoryPage() {
     return () => {
       active = false
     }
-  }, [supabase, router, reloadKey])
+  }, [supabase, router, reloadKey, language])
 
   async function handleSignOut() {
     if (signingOut) return

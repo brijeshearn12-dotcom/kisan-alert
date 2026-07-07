@@ -21,8 +21,10 @@ import {
 import { getSeasonForMonth } from '@/lib/season'
 import { computeIndex, estimateSoilMoisture } from '@/lib/vegetationIndex'
 import EnvironmentalConditionsCard from '@/components/EnvironmentalConditionsCard'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function DashboardPage() {
+  const { language } = useLanguage()
   const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
 
@@ -56,7 +58,7 @@ export default function DashboardPage() {
             .select('name, role, districts(name, state)')
             .eq('id', user.id)
             .single<ProfileRow>(),
-          fetch('/api/dashboard', { cache: 'no-store' }),
+          fetch(`/api/dashboard?lang=${language}`, { cache: 'no-store' }),
         ])
 
         if (!active) return
@@ -91,7 +93,7 @@ export default function DashboardPage() {
     return () => {
       active = false
     }
-  }, [supabase, router, reloadKey])
+  }, [supabase, router, reloadKey, language])
 
   async function handleSignOut() {
     setSigningOut(true)

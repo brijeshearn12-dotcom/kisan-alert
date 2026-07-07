@@ -17,6 +17,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabaseServer'
 import { fetchCurrentWeather, type CurrentWeather } from '@/lib/weather'
+import { translateText, type TargetLang } from '@/lib/googleCloud'
 
 export const dynamic = 'force-dynamic'
 
@@ -90,8 +91,11 @@ export function isDrySpell(weather: CurrentWeather | null): boolean {
   return false
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const targetLang = (searchParams.get('lang') || 'en') as TargetLang
+
     // ── 1. Authenticate (RLS + queries key off the session user) ──────────
     const supabase = await createServerSupabaseClient()
     const {
@@ -121,6 +125,10 @@ export async function GET() {
         : Promise.resolve(null),
       fetchLatestRecommendation(supabase, user.id),
     ])
+
+    if (latestRecommendation && latestRecommendation.reasoning && targetLang !== 'en') {
+      latestRecommendation.reasoning = await translateText(latestRecommendation.reasoning, targetLang)
+    }
 
     // ── 4. Respond (single combined payload) ──────────────────────────────
     return NextResponse.json({

@@ -49,7 +49,6 @@ export async function translateText(
         body: JSON.stringify({
           q: text,
           target: targetLang,
-          source: 'en',
           format: 'text',
         }),
       },

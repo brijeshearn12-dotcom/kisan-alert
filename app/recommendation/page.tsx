@@ -1103,6 +1103,67 @@ const HeroRecommendationCard = forwardRef<
           ? 'bg-blue-50 text-blue-700 ring-blue-600/10'
           : 'bg-slate-50 text-slate-700 ring-slate-600/10'
 
+    const getWhyBestChoiceBullets = () => {
+      const soilLabel = t(`soil.${soil}.label` as TranslationKey)
+      const riskLabel = pt(`rec.${risk.toLowerCase()}`)
+      
+      if (language === 'gu') {
+        return [
+          `તમારી ${soilLabel} જમીન માટે ઉત્તમ મેળ`,
+          `વર્તમાન હવામાન હેઠળ સૌથી વધુ પર્યાવરણીય અનુકૂળતા (${suitability}%)`,
+          `સૌથી ઓછું એકંદર ખેતી જોખમ (${riskLabel} જોખમ)`
+        ]
+      }
+      if (language === 'hi') {
+        return [
+          `आपकी ${soilLabel} मिट्टी के लिए सबसे उपयुक्त`,
+          `वर्तमान मौसम के तहत उच्चतम पर्यावरणीय उपयुक्तता (${suitability}%)`,
+          `सबसे कम समग्र खेती जोखिम (${riskLabel} जोखिम)`
+        ]
+      }
+      if (language === 'mr') {
+        return [
+          `तुमच्या ${soilLabel} मातीसाठी सर्वोत्तम जुळणी`,
+          `सध्याच्या हवामानानुसार सर्वाधिक पर्यावरणीय अनुकूलता (${suitability}%)`,
+          `सर्वात कमी एकूण लागवड जोखीम (${riskLabel} जोखीम)`
+        ]
+      }
+      if (language === 'kn') {
+        return [
+          `ನಿಮ್ಮ ${soilLabel} ಮಣ್ಣಿಗೆ ಅತ್ಯುತ್ತಮ ಹೊಂದಾಣಿಕೆ`,
+          `ಪ್ರಸ್ತುತ ಹವಾಮಾನದ ಅಡಿಯಲ್ಲಿ ಅತ್ಯುನ್ನತ ಪರಿಸರ ಸೂಕ್ತತೆ (${suitability}%)`,
+          `ಅತಿ ಕಡಿಮೆ ಒಟ್ಟಾರೆ ಬೇಸಾಯ ಅಪಾಯ (${riskLabel} ಅಪಾಯ)`
+        ]
+      }
+      if (language === 'ta') {
+        return [
+          `உங்கள் ${soilLabel} மண் வகைக்கு சிறந்த பொருத்தம்`,
+          `தற்போதைய வானிலையின் கீழ் அதிகபட்ச சுற்றுச்சூழல் பொருத்தம் (${suitability}%)`,
+          `குறைந்த ஒட்டுமொத்த சாகுபடி ஆபத்து (${riskLabel} ஆபத்து)`
+        ]
+      }
+      if (language === 'te') {
+        return [
+          `మీ ${soilLabel} నేల రకానికి ఉత్తమ సరిపోలిక`,
+          `ప్రస్తుత వాతావరణంలో అత్యధిక పర్యావరణ అనుకూలత (${suitability}%)`,
+          `అత్యల్ప మొత్తం సాగు ప్రమాదం (${riskLabel} ప్రమాదం)`
+        ]
+      }
+      if (language === 'bn') {
+        return [
+          `আপনার ${soilLabel} মাটির জন্য সবচেয়ে উপযুক্ত`,
+          `বর্তমান আবহাওয়ায় সর্বোচ্চ পরিবেশগত উপযুক্ততা (${suitability}%)`,
+          `সর্বনিম্ন সামগ্রিক চাষের ঝুঁকি (${riskLabel} ঝুঁকি)`
+        ]
+      }
+      // Default to English
+      return [
+        `Best match for your ${soilLabel} soil type`,
+        `Highest environmental suitability (${suitability}%) under current weather`,
+        `Lowest overall cultivation risk (${riskLabel} risk)`
+      ]
+    }
+
     return (
       <EntranceAnimation>
         <section
@@ -1169,9 +1230,9 @@ const HeroRecommendationCard = forwardRef<
                 {pt('rec.whyBestChoice')}
               </h3>
               <ul className="mt-2.5 space-y-1.5 text-xs text-slate-500 list-disc list-inside">
-                <li>Best match for your {t(`soil.${soil}` as TranslationKey)} soil type</li>
-                <li>Highest environmental suitability ({suitability}%) under current weather</li>
-                <li>Lowest overall cultivation risk ({pt(`rec.${risk.toLowerCase()}`)} risk)</li>
+                {getWhyBestChoiceBullets().map((bullet, idx) => (
+                  <li key={idx}>{bullet}</li>
+                ))}
               </ul>
             </div>
           </div>
@@ -1509,15 +1570,15 @@ function AdvancedInsightsAccordions({
           <div className="grid grid-cols-2 gap-4 text-xs text-slate-600 sm:grid-cols-3">
             <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-center">
               <span className="block text-slate-400 font-medium">{pt('rec.soilType')}</span>
-              <span className="mt-1 block text-sm font-semibold text-slate-800">{t(`soil.${soil}` as TranslationKey)}</span>
+              <span className="mt-1 block text-sm font-semibold text-slate-800">{t(`soil.${soil}.label` as TranslationKey)}</span>
             </div>
             <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-center">
               <span className="block text-slate-400 font-medium">{pt('rec.soilMoisture')}</span>
-              <span className="mt-1 block text-sm font-semibold text-slate-800">{soilMoisture}% ({moistureLevel})</span>
+              <span className="mt-1 block text-sm font-semibold text-slate-800">{soilMoisture}% ({t(`recommendation.moisture.${moistureLevel.toLowerCase()}` as TranslationKey)})</span>
             </div>
             <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-center col-span-2 sm:col-span-1">
               <span className="block text-slate-400 font-medium">{pt('rec.vegStatus')}</span>
-              <span className="mt-1 block text-sm font-semibold text-slate-800">{computedVegIndex.status}</span>
+              <span className="mt-1 block text-sm font-semibold text-slate-800">{t(`veg.status.${computedVegIndex.status.toLowerCase()}` as TranslationKey)}</span>
             </div>
           </div>
         </Accordion>

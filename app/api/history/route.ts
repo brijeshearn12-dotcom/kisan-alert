@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabaseServer'
+import { translateText, type TargetLang } from '@/lib/googleCloud'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,8 +37,11 @@ function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status })
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const targetLang = (searchParams.get('lang') || 'en') as TargetLang
+
     const supabase = await createServerSupabaseClient()
     const {
       data: { user },
@@ -108,6 +112,25 @@ export async function GET() {
 
     // Sort combined timeline by newest first
     timeline.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+    // Translate details and titles concurrently if language is not English
+    if (targetLang !== 'en' && timeline.length > 0) {
+      await Promise.all(
+        timeline.map(async (item) => {
+          const promises: Promise<string>[] = []
+          promises.push(translateText(item.details, targetLang))
+          if (item.type === 'disease_check' && item.title) {
+            promises.push(translateText(item.title, targetLang))
+          }
+
+          const results = await Promise.all(promises)
+          item.details = results[0] || item.details
+          if (results[1]) {
+            item.title = results[1]
+          }
+        })
+      )
+    }
 
     return NextResponse.json({ timeline })
   } catch (error) {

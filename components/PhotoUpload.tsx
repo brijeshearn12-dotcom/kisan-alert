@@ -226,14 +226,146 @@ const LOCAL_UI: Record<string, Record<string, string>> = {
   en: {
     failed: 'Failed',
     remove: 'Remove',
+    guidelineDesc: 'Provide a photo of the affected plant leaf to receive instant AI crop advisory.',
+    guidelineTitle: 'Image Guidelines for Best Results',
+    clearImage: 'Use a clear image',
+    captureLeaves: 'Capture affected leaves',
+    naturalDaylight: 'Prefer natural daylight',
+    avoidBlurry: 'Avoid blurry images',
+    altText: 'Selected plant crop leaf',
+    uploadedSecure: 'Uploaded to secure server',
+    status: 'Status: ',
+    uploadIssue: 'Upload Issue',
+    resetTryAgain: 'Reset and Try Again',
+    preparing: 'Preparing image...',
+    uploading: 'Uploading image...',
+    success: 'Image uploaded successfully',
   },
   hi: {
     failed: 'विफल',
     remove: 'हटाएं',
+    guidelineDesc: 'त्वरित एआई फसल सलाह प्राप्त करने के लिए प्रभावित पौधे की पत्ती का फोटो प्रदान करें।',
+    guidelineTitle: 'सर्वोत्तम परिणामों के लिए छवि दिशानिर्देश',
+    clearImage: 'स्पष्ट छवि का उपयोग करें',
+    captureLeaves: 'प्रभावित पत्तियों को कैप्चर करें',
+    naturalDaylight: 'प्राकृतिक दिन के प्रकाश को प्राथमिकता दें',
+    avoidBlurry: 'धुंधली छवियों से बचें',
+    altText: 'चयनित पौधे की पत्ती',
+    uploadedSecure: 'सुरक्षित सर्वर पर अपलोड किया गया',
+    status: 'स्थिति: ',
+    uploadIssue: 'अपलोड समस्या',
+    resetTryAgain: 'रीसेट करें और पुनः प्रयास करें',
+    preparing: 'छवि तैयार की जा रही है...',
+    uploading: 'छवि अपलोड की जा रही है...',
+    success: 'छवि सफलतापूर्वक अपलोड की गई',
+  },
+  mr: {
+    failed: 'अपयशी',
+    remove: 'काढून टाका',
+    guidelineDesc: 'त्वरित एआय पीक सल्ला मिळविण्यासाठी प्रभावित वनस्पतीच्या पानाचा फोटो प्रदान करा.',
+    guidelineTitle: 'सर्वोत्तम परिणामांसाठी प्रतिमा मार्गदर्शक तत्त्वे',
+    clearImage: 'स्पष्ट प्रतिमा वापरा',
+    captureLeaves: 'प्रभावित पाने कॅप्चर करा',
+    naturalDaylight: 'नैसर्गिक दिवसाच्या प्रकाशाला प्राधान्य द्या',
+    avoidBlurry: 'अस्पष्ट प्रतिमा टाळा',
+    altText: 'निवडलेले वनस्पतीचे पान',
+    uploadedSecure: 'सुरक्षित सर्व्हरवर अपलोड केले',
+    status: 'स्थिती: ',
+    uploadIssue: 'अपलोड समस्या',
+    resetTryAgain: 'रीसेट करा आणि पुन्हा प्रयत्न करा',
+    preparing: 'प्रतिमा तयार करत आहे...',
+    uploading: 'प्रतिमा अपलोड करत आहे...',
+    success: 'प्रतिमा यशस्वीरित्या अपलोड केली',
+  },
+  gu: {
+    failed: 'નિષ્ફળ',
+    remove: 'દૂર કરો',
+    guidelineDesc: 'ત્વરિત એઆઈ પાક સલાહ મેળવવા માટે અસરગ્રસ્ત છોડના પાનનો ફોટો પ્રદાન કરો.',
+    guidelineTitle: 'શ્રેષ્ઠ પરિણામો માટે છબી માર્ગદર્શિકા',
+    clearImage: 'સ્પષ્ટ છબી વાપરો',
+    captureLeaves: 'અસરગ્રસ્ત પાંદડા કેપ્ચર કરો',
+    naturalDaylight: 'કુદરતી દિવસના પ્રકાશને પ્રાધાન્ય આપો',
+    avoidBlurry: 'ઝાંખી છબીઓ ટાળો',
+    altText: 'પસંદ કરેલ છોડનું પાન',
+    uploadedSecure: 'સુરક્ષિત સર્વર પર અપલોડ કરવામાં આવ્યું',
+    status: 'સ્થિતિ: ',
+    uploadIssue: 'અપલોડ સમસ્યા',
+    resetTryAgain: 'રીસેટ કરો અને ફરી પ્રયાસ કરો',
+    preparing: 'છબી તૈયાર થઈ રહી છે...',
+    uploading: 'છબી અપલોડ થઈ રહી છે...',
+    success: 'છબી સફળતાપૂર્વક અપલોડ થઈ',
+  },
+  kn: {
+    failed: 'ವಿಫಲವಾಗಿದೆ',
+    remove: 'ತೆಗೆದುಹಾಕಿ',
+    guidelineDesc: 'ತ್ವರಿత AI ಬೆಳೆ ಸಲಹೆ ಪಡೆಯಲು ಬಾಧిత ಸಸ್ಯದ ఎಲೆಯ ಫೋಟೋವನ್ನು ಒದಗಿಸಿ.',
+    guidelineTitle: 'ಅತ್ಯುತ್ತม ಫಲಿತಾಂಶಗಳಿಗಾಗಿ ಚಿತ್ರ ಮಾರ್ಗಸೂಚಿಗಳು',
+    clearImage: 'ಸ್ಪಷ್ಟ ಚಿತ್ರವನ್ನು ಬಳಸಿ',
+    captureLeaves: 'ಬಾಧಿತ ಎಲೆಗಳನ್ನು ಸೆರೆಹಿಡಿಯಿರಿ',
+    naturalDaylight: 'ನೈಸರ್ಗಿಕ ಹಗಲು ಬೆಳಕನ್ನು ಆದ್ಯತೆ ನೀಡಿ',
+    avoidBlurry: 'ಮಸುಕಾದ ಚಿತ್ರಗಳನ್ನು ತಪ್ಪಿಸಿ',
+    altText: 'ಆಯ್ಕೆಮಾಡಿದ ಸಸ್ಯದ ಎಲೆ',
+    uploadedSecure: 'ಸುರಕ್ಷಿತ ಸರ್ವರ್‌ಗೆ అప్‍ಲೋడ్ ಮಾಡಲಾಗಿದೆ',
+    status: 'ಸ್ಥಿತಿ: ',
+    uploadIssue: 'అప్‍ಲೋడ్ ಸಮಸ್ಯೆ',
+    resetTryAgain: 'ರೀಸೆಟ್ ಮಾಡಿ ಮತ್ತು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ',
+    preparing: 'ಚಿತ್ರವನ್ನು ಸಿದ್ಧಪಡಿಸಲಾಗುತ್ತಿದೆ...',
+    uploading: 'ಚಿತ್ರವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ...',
+    success: 'ಚಿತ್ರವನ್ನು ಯಶಸ್ವಿಯಾಗಿ ಅಪ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ',
+  },
+  ta: {
+    failed: 'தோல்வி',
+    remove: 'நீக்கு',
+    guidelineDesc: 'உடனடி AI பயிர் ஆலோசனையைப் பெற பாதிக்கப்பட்ட தாவர இலையின் புகைப்படத்தை வழங்கவும்.',
+    guidelineTitle: 'சிறந்த முடிவுகளுக்கான பட வழிகாட்டுதல்கள்',
+    clearImage: 'தெளிவான படத்தைப் பயன்படுத்தவும்',
+    captureLeaves: 'பாதிக்கப்பட்ட இலைகளைப் படம் பிடிக்கவும்',
+    naturalDaylight: 'இயற்கையான பகல் வெளிச்சத்தை விரும்பவும்',
+    avoidBlurry: 'மங்கலான படங்களைத் தவிர்க்கவும்',
+    altText: 'தேர்ந்தெடுக்கப்பட்ட தாவர இலை',
+    uploadedSecure: 'பாதுகாப்பான சேவையகத்தில் பதிவேற்றப்பட்டது',
+    status: 'நிலை: ',
+    uploadIssue: 'பதிவேற்ற சிக்கல்',
+    resetTryAgain: 'மீட்டமைத்து மீண்டும் முயற்சிக்கவும்',
+    preparing: 'படம் தயார் செய்யப்படுகிறது...',
+    uploading: 'படம் பதிவேற்றப்படுகிறது...',
+    success: 'படம் வெற்றிகரமாக பதிவேற்றப்பட்டது',
   },
   te: {
     failed: 'విఫలమైంది',
     remove: 'తొలగించు',
+    guidelineDesc: 'తక్షణ AI పంట సలహా పొందడానికి ప్రభావిత మొక్క ఆకు ఫోటోను అందించండి.',
+    guidelineTitle: 'ఉత్తమ ఫలితాల కోసం చిత్ర మార్గదర్శకాలు',
+    clearImage: 'స్పష్టమైన చిత్రాన్ని ఉపయోగించండి',
+    captureLeaves: 'ప్రభావిత ఆకులను క్యాప్చర్ చేయండి',
+    naturalDaylight: 'సహజ పగటి వెలుతురును ప్రాధాన్యత ఇవ్వండి',
+    avoidBlurry: 'మసకబారిన చిత్రాలను నివారించండి',
+    altText: 'ఎంచుకున్న మొక్క ఆకు',
+    uploadedSecure: 'సురక్షిత సర్వర్‌కు అప్‌లోడ్ చేయబడింది',
+    status: 'స్థితి: ',
+    uploadIssue: 'అప్‌లోడ్ సమస్య',
+    resetTryAgain: 'రీసెట్ చేసి మళ్లీ ప్రయత్నించండి',
+    preparing: 'చిత్రాన్ని సిద్ధం చేస్తోంది...',
+    uploading: 'చిత్రాన్ని అప్‌లోడ్ చేస్తోంది...',
+    success: 'చిత్రం విజయవంతంగా అప్‌లోడ్ చేయబడింది',
+  },
+  bn: {
+    failed: 'ব্যর্থ',
+    remove: 'সরিয়ে ফেলুন',
+    guidelineDesc: 'তাৎক্ষণিক এআই ফসল পরামর্শ পেতে আক্রান্ত গাছের পাতার ছবি দিন।',
+    guidelineTitle: 'সেরা ফলাফলের জন্য ছবির নির্দেশিকা',
+    clearImage: 'পরিষ্কার ছবি ব্যবহার করুন',
+    captureLeaves: 'আক্রান্ত পাতার ছবি তুলুন',
+    naturalDaylight: 'প্রাকৃতিক দিনের আলো পছন্দ করুন',
+    avoidBlurry: 'ঝাপসা ছবি এড়িয়ে চলুন',
+    altText: 'নির্বাচিত গাছের পাতা',
+    uploadedSecure: 'সুরক্ষিত সার্ভারে আপলোড করা হয়েছে',
+    status: 'অবস্থা: ',
+    uploadIssue: 'আপলোড সমস্যা',
+    resetTryAgain: 'রিসেট করে আবার চেষ্টা করুন',
+    preparing: 'ছবি প্রস্তুত করা হচ্ছে...',
+    uploading: 'ছবি আপলোড করা হচ্ছে...',
+    success: 'ছবি সফলভাবে আপলোড করা হয়েছে',
   },
 }
 
@@ -246,6 +378,7 @@ export default function PhotoUpload({
   className = '',
 }: PhotoUploadProps) {
   const { t, language } = useLanguage()
+  const ui = LOCAL_UI[language] || LOCAL_UI.en
 
   const [status, setStatus] = useState<Status>('idle')
   const [progress, setProgress] = useState(0)
@@ -397,30 +530,30 @@ export default function PhotoUpload({
               {t('disease.uploadPhoto') || 'Upload Crop Photo'}
             </h3>
             <p className="mt-1 text-xs text-slate-400 max-w-sm">
-              Provide a photo of the affected plant leaf to receive instant AI crop advisory.
+              {ui.guidelineDesc}
             </p>
 
             {/* Guidance Grid */}
             <div className="mt-6 w-full max-w-md rounded-xl border border-slate-100 bg-slate-50/60 p-4 text-left">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2.5">
-                Image Guidelines for Best Results
+                {ui.guidelineTitle}
               </span>
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 text-xs">
                 <div className="flex items-start gap-2 text-slate-600">
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">✓</span>
-                  <span>Use a clear image</span>
+                  <span>{ui.clearImage}</span>
                 </div>
                 <div className="flex items-start gap-2 text-slate-600">
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">✓</span>
-                  <span>Capture affected leaves</span>
+                  <span>{ui.captureLeaves}</span>
                 </div>
                 <div className="flex items-start gap-2 text-slate-600">
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">✓</span>
-                  <span>Prefer natural daylight</span>
+                  <span>{ui.naturalDaylight}</span>
                 </div>
                 <div className="flex items-start gap-2 text-slate-600">
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">✓</span>
-                  <span>Avoid blurry images</span>
+                  <span>{ui.avoidBlurry}</span>
                 </div>
               </div>
             </div>
@@ -455,7 +588,7 @@ export default function PhotoUpload({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={previewUrl}
-                  alt="Selected plant crop leaf"
+                  alt={ui.altText}
                   className="h-full w-full object-cover"
                 />
               )}
@@ -465,16 +598,16 @@ export default function PhotoUpload({
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/90 backdrop-blur-[1px]">
                   <div className="w-48 px-4 text-center">
                     <div className="mb-2 flex items-center justify-between text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                      <span>{status === 'preparing' ? t('upload.preparing') || 'Preparing image...' : t('upload.uploading') || 'Uploading image...'}</span>
+                      <span>{status === 'preparing' ? t('upload.preparing') || ui.preparing : t('upload.uploading') || ui.uploading}</span>
                       {status === 'uploading' && <span className="tabular-nums font-semibold text-emerald-600">{progress}%</span>}
                     </div>
                     <div
-                      className="h-2 w-full overflow-hidden rounded-full bg-slate-200 shadow-inner"
-                      role="progressbar"
-                      aria-valuenow={status === 'uploading' ? progress : undefined}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-label="Upload progress"
+                       className="h-2 w-full overflow-hidden rounded-full bg-slate-200 shadow-inner"
+                       role="progressbar"
+                       aria-valuenow={status === 'uploading' ? progress : undefined}
+                       aria-valuemin={0}
+                       aria-valuemax={100}
+                       aria-label="Upload progress"
                     >
                       <div
                         className={`h-full rounded-full bg-gradient-to-r from-emerald-600 to-teal-500 transition-all duration-300 ${
@@ -498,7 +631,7 @@ export default function PhotoUpload({
               {!busy && status === 'error' && (
                 <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-rose-600 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white shadow-md">
                   {WarningIcon}
-                  {(LOCAL_UI[language] || LOCAL_UI.en).failed}
+                  {ui.failed}
                 </div>
               )}
             </div>
@@ -512,7 +645,7 @@ export default function PhotoUpload({
                       {fileMeta.name}
                     </p>
                     <p className="text-[11px] font-semibold text-slate-400">
-                      {fileMeta.size} • {status === 'success' ? 'Uploaded to secure server' : 'Status: ' + status}
+                      {fileMeta.size} • {status === 'success' ? ui.uploadedSecure : `${ui.status} ${status}`}
                     </p>
                   </div>
                 )}
@@ -536,7 +669,7 @@ export default function PhotoUpload({
                     className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-rose-100 bg-rose-50/50 px-4 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-100/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40 disabled:cursor-not-allowed disabled:text-slate-400 min-h-[40px]"
                   >
                     {TrashIcon}
-                    {(LOCAL_UI[language] || LOCAL_UI.en).remove}
+                    {ui.remove}
                   </button>
                 </div>
               </div>
@@ -553,14 +686,14 @@ export default function PhotoUpload({
         >
           <span className="mt-0.5 shrink-0 text-rose-500">{WarningIcon}</span>
           <div className="flex-1">
-            <p className="font-semibold text-rose-900">Upload Issue</p>
+            <p className="font-semibold text-rose-900">{ui.uploadIssue}</p>
             <p className="mt-0.5 leading-relaxed text-xs">{errorMessage}</p>
             <button
               type="button"
               onClick={reset}
               className="mt-2 text-xs font-bold text-rose-600 hover:underline underline-offset-2"
             >
-              Reset and Try Again
+              {ui.resetTryAgain}
             </button>
           </div>
         </div>
@@ -568,9 +701,9 @@ export default function PhotoUpload({
 
       {/* Screen-reader status announcements */}
       <p id={statusId} className="sr-only" role="status" aria-live="polite">
-        {status === 'preparing' && t('upload.sr.preparing') || 'Preparing image...'}
-        {status === 'uploading' && (t('upload.sr.uploading', { percent: progress }) || `Uploading image, ${progress} percent`)}
-        {status === 'success' && (t('upload.sr.success') || 'Image uploaded successfully')}
+        {status === 'preparing' && (t('upload.sr.preparing') || ui.preparing)}
+        {status === 'uploading' && (t('upload.sr.uploading', { percent: progress }) || `${ui.uploading} ${progress}%`)}
+        {status === 'success' && (t('upload.sr.success') || ui.success)}
         {status === 'error' && errorMessage}
       </p>
     </div>

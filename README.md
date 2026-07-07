@@ -26,9 +26,7 @@
 
 ## 🚀 Live Demo
 
-Experience the live application here:
-
-[![Live Demo](https://img.shields.io/badge/Deploy-Vercel-black?style=for-the-badge&logo=vercel)](https://kisan-alert-psi.vercel.app/)
+**Live Application:** https://kisan-alert-psi.vercel.app/
 
 Try out the following key capabilities live:
 - **AI Crop Recommendation** - Get tailored suggestions based on soil and weather.
@@ -41,8 +39,6 @@ Try out the following key capabilities live:
 ---
 
 Kisan Alert is a multilingual, climate-resilient crop advisory and expert consultation ecosystem designed to support smallholder farmers in India. It translates raw environmental signals (live weather, seasonal windows, soil attributes) and visual indicators (leaf scans) into actionable agricultural advisories, while bridging the gap between artificial intelligence and human expert validation.
-
-Access the live deployment: **[kisan-alert-psi.vercel.app](https://kisan-alert-psi.vercel.app/)**
 
 ---
 
@@ -378,8 +374,6 @@ npm install
 npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) to view the application.
-
-*Alternatively, you can access the live deployed platform directly at **[kisan-alert-psi.vercel.app](https://kisan-alert-psi.vercel.app/)**.*
 </details>
 
 ---

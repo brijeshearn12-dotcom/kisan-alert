@@ -1,35 +1,52 @@
-# 🌾 Kisan Alert
-### AI-Powered Climate-Resilient Crop Advisory & Expert Consultation Workspace
+<p align="center">
+  <h1 align="center">🌾 Kisan Alert</h1>
+  <p align="center"><strong>AI-Powered Climate-Resilient Crop Advisory &amp; Expert Consultation Workspace</strong></p>
+</p>
+
+<p align="center">
+  <a href="#-problem-statement">Problem</a> •
+  <a href="#-key-features">Features</a> •
+  <a href="#-screenshot-gallery">Gallery</a> •
+  <a href="#-system-architecture">Architecture</a> •
+  <a href="#-installation--setup">Setup</a>
+</p>
+
+<p align="center">
+  <!-- Frontend -->
+  <img src="https://img.shields.io/badge/Next.js-16.2-emerald.svg?style=flat-square&logo=nextdotjs" alt="Next.js" />
+  <img src="https://img.shields.io/badge/TypeScript-5.0-blue.svg?style=flat-square&logo=typescript" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/TailwindCSS-v4.0-06B6D4.svg?style=flat-square&logo=tailwindcss" alt="TailwindCSS" />
+  <!-- Backend / Auth -->
+  <img src="https://img.shields.io/badge/Supabase-Database-3ECF8E.svg?style=flat-square&logo=supabase" alt="Supabase" />
+  <img src="https://img.shields.io/badge/Firebase-Realtime-FFCA28.svg?style=flat-square&logo=firebase" alt="Firebase" />
+  <!-- AI -->
+  <img src="https://img.shields.io/badge/Gemini%20AI-Flash%20Lite-4285F4.svg?style=flat-square&logo=googlegemini" alt="Gemini" />
+</p>
 
 ---
 
-[![Next.js](https://img.shields.io/badge/Next.js-16.2-emerald.svg?style=for-the-badge&logo=nextdotjs)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4.0-06B6D4.svg?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
-[![Supabase](https://img.shields.io/badge/Supabase-Database-3ECF8E.svg?style=for-the-badge&logo=supabase)](https://supabase.com/)
-[![Firebase](https://img.shields.io/badge/Firebase-Realtime-FFCA28.svg?style=for-the-badge&logo=firebase)](https://firebase.google.com/)
-[![Gemini](https://img.shields.io/badge/Gemini%20AI-Flash%20Lite-4285F4.svg?style=for-the-badge&logo=googlegemini)](https://deepmind.google/technologies/gemini/)
-
-Kisan Alert is an advanced, multilingual, climate-resilient crop advisory and expert consultation ecosystem designed to support smallholder farmers in India. It translates raw environmental signals (live weather, seasonal windows, soil attributes) and visual indicators (leaf scans) into highly actionable agricultural advisories, while bridging the gap between artificial intelligence and human expert validation.
+Kisan Alert is a multilingual, climate-resilient crop advisory and expert consultation ecosystem designed to support smallholder farmers in India. It translates raw environmental signals (live weather, seasonal windows, soil attributes) and visual indicators (leaf scans) into actionable agricultural advisories, while bridging the gap between artificial intelligence and human expert validation.
 
 ---
 
-## 📖 Table of Contents
-1. [Problem Statement](#-problem-statement)
-2. [Our Solution](#-our-solution)
-3. [Key Features](#-key-features)
-4. [System Architecture](#-system-architecture)
-5. [Application Flow](#-application-flow)
-6. [AI Pipeline](#-ai-pipeline)
-7. [Tech Stack](#-tech-stack)
-8. [Folder Structure](#-folder-structure)
-9. [API Documentation](#-api-documentation)
-10. [Database Schema](#-database-schema)
-11. [Security & Verification](#-security--verification)
-12. [Performance Optimizations](#-performance-optimizations)
-13. [Accessibility](#-accessibility)
-14. [Installation & Setup](#-installation--setup)
-15. [Meet the Team](#-meet-the-team)
+## 🗺️ Table of Contents
+
+- [🚨 Problem Statement](#-problem-statement)
+- [💡 Our Solution](#-our-solution)
+- [✨ Key Features](#-key-features)
+- [📱 Screenshot Gallery](#-screenshot-gallery)
+- [🏗️ System Architecture](#-system-architecture)
+- [🔄 Application Flow](#-application-flow)
+- [🧠 AI Pipeline](#-ai-pipeline)
+- [🛠️ Tech Stack](#-tech-stack)
+- [📁 Folder Structure](#-folder-structure)
+- [🔌 API Documentation](#-api-documentation)
+- [🗄️ Database Schema](#-database-schema)
+- [🔒 Security & Verification](#-security--verification)
+- [🚀 Performance Optimizations](#-performance-optimizations)
+- [🌐 Accessibility](#-accessibility)
+- [📥 Installation & Setup](#-installation--setup)
+- [👥 Meet the Team](#-meet-the-team)
 
 ---
 
@@ -56,39 +73,73 @@ Kisan Alert offers a unified, safe, and collaborative climate-resilient workflow
 
 ## ✨ Key Features
 
-| Feature | Icon | Description | Core Benefit |
-| :--- | :---: | :--- | :--- |
-| **AI Crop Selector** | 🌾 | Recommends 3 ranked crops adjusted for soil types and season windows. | Maximizes seasonal yields and mitigates crop failures. |
-| **Disease Checker** | 🔍 | Identifies plant pathogens from photos or voice descriptions using Gemini. | Instant pest/disease identification on the field. |
-| **Expert Workspace** | 👨‍🔬 | A dedicated dashboard for scientists to review, edit, and sign off on pending cases. | Brings human verification to automated AI findings. |
-| **Moisture Estimator** | 💧 | Rule-based soil moisture and vegetation index tracker driven by 7-day weather. | Removes the need for expensive hardware sensors. |
-| **Real-time Alerts** | 🔔 | Broadcasts push notifications via Firebase Realtime Database. | Instant warnings on weather anomalies or expert answers. |
-| **Voice Interface** | 🗣️ | Integrates Google Cloud TTS & STT for voice-guided navigation. | Enables access for semi-literate and vernacular farmers. |
+| Feature & Icon | Core Description | Primary Technology | Farmer Benefit |
+| :--- | :--- | :--- | :--- |
+| **🌾 AI Crop Selector** | Recommends 3 ranked crops adjusted for soil types and season windows. | Gemini-3.1-Flash-Lite | Maximizes seasonal yields and mitigates crop failures. |
+| **🔍 Disease Checker** | Identifies plant pathogens from photos or voice descriptions. | Gemini-2.5-Flash (Vision) | Instant pest/disease identification on the field. |
+| **👨‍🔬 Expert Workspace** | Dedicated dashboard for scientists to review, edit, and sign off cases. | React 19 Workspace | Brings human verification to automated AI findings. |
+| **💧 Moisture Estimator** | Rule-based soil moisture and vegetation index tracker driven by 7-day weather. | Open-Meteo API | Removes the need for expensive hardware sensors. |
+| **🔔 Real-time Alerts** | Broadcasts push notifications for weather anomalies or expert replies. | Firebase Realtime DB | Instant warnings directly on the dashboard. |
+| **🗣️ Voice Interface** | Speech-to-text input and natural read-aloud voice guidance. | Google Cloud TTS / STT | Access for semi-literate and vernacular farmers. |
+
+---
+
+## 📱 Screenshot Gallery
+
+<p align="center">
+  <table>
+    <tr>
+      <td width="50%" align="center">
+        <strong>Farmer Dashboard</strong><br />
+        <img src="https://placehold.co/600x400/10b981/ffffff?text=Farmer+Dashboard+UI" alt="Farmer Dashboard" /><br />
+        <em>Overview of weather, indices, and alerts</em>
+      </td>
+      <td width="50%" align="center">
+        <strong>Crop Recommendation</strong><br />
+        <img src="https://placehold.co/600x400/10b981/ffffff?text=Crop+Advisory+UI" alt="Crop Recommendation" /><br />
+        <em>Ranked crop choices & suitability reasoning</em>
+      </td>
+    </tr>
+    <tr>
+      <td width="50%" align="center">
+        <strong>Disease Check Upload</strong><br />
+        <img src="https://placehold.co/600x400/10b981/ffffff?text=Disease+Check+UI" alt="Disease Check" /><br />
+        <em>Leaf image scanning and voice diagnosis</em>
+      </td>
+      <td width="50%" align="center">
+        <strong>Expert Portal</strong><br />
+        <img src="https://placehold.co/600x400/10b981/ffffff?text=Expert+Portal+UI" alt="Expert Portal" /><br />
+        <em>Professional consultation workspace</em>
+      </td>
+    </tr>
+  </table>
+</p>
 
 ---
 
 ## 🏗️ System Architecture
 
+<details>
+<summary>🛠️ Click to expand Technical Architecture Diagram</summary>
+
 ```mermaid
 graph TD
-    subgraph Frontend [Next.js Client Application]
-        Client[Farmer / Expert Dashboard]
-        Upload[Photo Upload Component]
-        Voice[TTS / STT Voice Interface]
-    end
+    classDef client fill:#e0f2fe,stroke:#0284c7,stroke-width:2px;
+    classDef server fill:#ecfdf5,stroke:#059669,stroke-width:2px;
+    classDef database fill:#fef3c7,stroke:#d97706,stroke-width:2px;
 
-    subgraph Server [Next.js Route Handlers]
-        AuthHandler[Supabase Auth Session]
-        GeminiService[Gemini Integration Service]
-        CloudProxy[Google Cloud TTS/STT/Translate Proxy]
-    end
+    Client["Farmer / Expert Dashboard"]:::client
+    Upload["Photo Upload Component"]:::client
+    Voice["TTS / STT Voice Interface"]:::client
 
-    subgraph Backend [Backend Services]
-        SupaDB[(Supabase Postgres Database)]
-        RealtimeDB[(Firebase Realtime Notifications)]
-        Cloudinary[(Cloudinary Image CDN)]
-        OpenMeteo[(Open-Meteo Weather API)]
-    end
+    AuthHandler["Supabase Auth Session"]:::server
+    GeminiService["Gemini Integration Service"]:::server
+    CloudProxy["Google Cloud TTS/STT/Translate Proxy"]:::server
+
+    SupaDB[("Supabase Postgres Database")]:::database
+    RealtimeDB[("Firebase Realtime Notifications")]:::database
+    Cloudinary[("Cloudinary Image CDN")]:::database
+    OpenMeteo[("Open-Meteo Weather API")]:::database
 
     Client -->|Session Cookie| AuthHandler
     Client -->|Base64 Voice| CloudProxy
@@ -102,6 +153,7 @@ graph TD
     GeminiService -->|Trigger Alerts| RealtimeDB
     RealtimeDB -.->|Real-time Sync| Client
 ```
+</details>
 
 ---
 
@@ -121,7 +173,7 @@ flowchart TD
     Choice -->|Crop Recommendation| InputSoil[Select Soil Type & District]
     InputSoil --> GetWeather[Fetch Live 7-Day Weather Forecast]
     GetWeather --> CropLookup[Filter Viable Crops by Soil & Season]
-    CropLookup --> GeminiRec[Gemini AI Recommendation & Alternatives]
+    GetWeather --> GeminiRec[Gemini AI Recommendation & Alternatives]
     GeminiRec --> ShowRec[Display Ranked Suitability & Fertilizer Recipe]
 ```
 
@@ -157,6 +209,9 @@ graph LR
 
 ## 📁 Folder Structure
 
+<details>
+<summary>📂 Click to expand codebase directory structure</summary>
+
 ```
 ├── app/
 │   ├── (auth)/                # Signup & Login routes
@@ -180,10 +235,14 @@ graph LR
 ├── lib/                       # Services, constants, and database utilities
 └── supabase/                  # Database migration schema
 ```
+</details>
 
 ---
 
 ## 🔌 API Documentation
+
+<details>
+<summary>🔌 Click to expand Serverless Endpoints API Docs</summary>
 
 | Method | Endpoint | Authentication | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -196,10 +255,14 @@ graph LR
 | `POST` | `/api/translate` | Required (User) | Translates English advisories into target languages. |
 | `POST` | `/api/stt` | Required (User) | Transcribes Base64 WEBM/Opus audio to text. |
 | `POST` | `/api/tts` | Required (User) | Synthesizes text to Base64 MP3 audio content. |
+</details>
 
 ---
 
 ## 🗄️ Database Schema
+
+<details>
+<summary>🗄️ Click to expand Database ER Diagrams</summary>
 
 ```mermaid
 erDiagram
@@ -253,6 +316,7 @@ erDiagram
         timestamptz created_at
     }
 ```
+</details>
 
 ---
 
@@ -285,6 +349,9 @@ erDiagram
 ---
 
 ## 📥 Installation & Setup
+
+<details>
+<summary>💻 Click to expand Developer Setup and Running Instructions</summary>
 
 ### Prerequisites
 * [Node.js](https://nodejs.org/) v18 or later
@@ -327,6 +394,7 @@ npm install
 npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) to view the application.
+</details>
 
 ---
 

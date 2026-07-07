@@ -1,112 +1,339 @@
-# Kisan Alert
+# 🌾 Kisan Alert
+### AI-Powered Climate-Resilient Crop Advisory & Expert Consultation Workspace
 
-AI-powered crop advisory for Maharashtra smallholder farmers.
+---
 
-## What it does
+[![Next.js](https://img.shields.io/badge/Next.js-16.2-emerald.svg?style=for-the-badge&logo=nextdotjs)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4.0-06B6D4.svg?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-Database-3ECF8E.svg?style=for-the-badge&logo=supabase)](https://supabase.com/)
+[![Firebase](https://img.shields.io/badge/Firebase-Realtime-FFCA28.svg?style=for-the-badge&logo=firebase)](https://firebase.google.com/)
+[![Gemini](https://img.shields.io/badge/Gemini%20AI-Flash%20Lite-4285F4.svg?style=for-the-badge&logo=googlegemini)](https://deepmind.google/technologies/gemini/)
 
-Kisan Alert helps farmers select the right crop for their field by combining:
+Kisan Alert is an advanced, multilingual, climate-resilient crop advisory and expert consultation ecosystem designed to support smallholder farmers in India. It translates raw environmental signals (live weather, seasonal windows, soil attributes) and visual indicators (leaf scans) into highly actionable agricultural advisories, while bridging the gap between artificial intelligence and human expert validation.
 
-- **Soil type selection** — Sandy, Loamy, Clayey, or Black Cotton
-- **Live 7-day weather forecast** from Open-Meteo (no API key required)
-- **Gemini AI reasoning** — constrained to agronomically viable crops for the current season
-- **Dry spell detection** — alerts farmers when weekly rainfall drops below 10 mm
+---
 
-## Tech Stack
+## 📖 Table of Contents
+1. [Problem Statement](#-problem-statement)
+2. [Our Solution](#-our-solution)
+3. [Key Features](#-key-features)
+4. [System Architecture](#-system-architecture)
+5. [Application Flow](#-application-flow)
+6. [AI Pipeline](#-ai-pipeline)
+7. [Tech Stack](#-tech-stack)
+8. [Folder Structure](#-folder-structure)
+9. [API Documentation](#-api-documentation)
+10. [Database Schema](#-database-schema)
+11. [Security & Verification](#-security--verification)
+12. [Performance Optimizations](#-performance-optimizations)
+13. [Accessibility](#-accessibility)
+14. [Installation & Setup](#-installation--setup)
+15. [Meet the Team](#-meet-the-team)
 
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 16 (App Router) |
-| Language | TypeScript (strict) |
-| Styling | Tailwind CSS v4 |
-| Auth + DB | Supabase (Postgres + RLS) |
-| AI | Google Gemini 2.0 Flash |
-| Weather | Open-Meteo API |
+---
 
-## Getting Started
+## 🚨 Problem Statement
 
-1. Copy `.env.local.example` to `.env.local` and fill in your keys:
+Smallholder farmers in India operate on the frontlines of climate volatility, facing unpredictable rainfall, dry spells, and rapid crop disease outbreaks.
+
+> [!IMPORTANT]
+> **Why Current Solutions Fail:**
+> * **Data Isolation:** Farmers consult weather tools, soil charts, and disease apps in isolation. There is no unified system connecting weather forecasts with specific soil constraints and season boundaries.
+> * **The AI Trust Gap:** Purely automated AI diagnostics can misdiagnose rare crop pathogens, leading to crop loss or wasted chemical treatments.
+> * **Language & Literacy Barriers:** Most digital solutions are text-heavy and only available in English or standard Hindi, excluding millions of regional-language speakers who rely on voice interface patterns.
+
+---
+
+## 💡 Our Solution
+
+Kisan Alert offers a unified, safe, and collaborative climate-resilient workflow:
+1. **Context-Aware Advisory:** Connects live district meteorology (Open-Meteo) with soil properties and current seasonal parameters (Kharif, Rabi, Summer) to recommend the top 3 agronomically viable crops.
+2. **AI-Human Collaborative Diagnosis:** Leverages Gemini Vision for instant disease checks. If the diagnostic confidence drops below 60%, the case is automatically escalated to a regional agricultural research station (Rythu Seva Kendra) where human experts review and stamp structured prescriptions.
+3. **Multilingual and Voice-First Accessibility:** Fully localized in 8 Indian languages (English, Hindi, Marathi, Gujarati, Kannada, Tamil, Telugu, and Bengali) with native speech-to-text input and natural read-aloud voice guidance.
+
+---
+
+## ✨ Key Features
+
+| Feature | Icon | Description | Core Benefit |
+| :--- | :---: | :--- | :--- |
+| **AI Crop Selector** | 🌾 | Recommends 3 ranked crops adjusted for soil types and season windows. | Maximizes seasonal yields and mitigates crop failures. |
+| **Disease Checker** | 🔍 | Identifies plant pathogens from photos or voice descriptions using Gemini. | Instant pest/disease identification on the field. |
+| **Expert Workspace** | 👨‍🔬 | A dedicated dashboard for scientists to review, edit, and sign off on pending cases. | Brings human verification to automated AI findings. |
+| **Moisture Estimator** | 💧 | Rule-based soil moisture and vegetation index tracker driven by 7-day weather. | Removes the need for expensive hardware sensors. |
+| **Real-time Alerts** | 🔔 | Broadcasts push notifications via Firebase Realtime Database. | Instant warnings on weather anomalies or expert answers. |
+| **Voice Interface** | 🗣️ | Integrates Google Cloud TTS & STT for voice-guided navigation. | Enables access for semi-literate and vernacular farmers. |
+
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+graph TD
+    subgraph Frontend [Next.js Client Application]
+        Client[Farmer / Expert Dashboard]
+        Upload[Photo Upload Component]
+        Voice[TTS / STT Voice Interface]
+    end
+
+    subgraph Server [Next.js Route Handlers]
+        AuthHandler[Supabase Auth Session]
+        GeminiService[Gemini Integration Service]
+        CloudProxy[Google Cloud TTS/STT/Translate Proxy]
+    end
+
+    subgraph Backend [Backend Services]
+        SupaDB[(Supabase Postgres Database)]
+        RealtimeDB[(Firebase Realtime Notifications)]
+        Cloudinary[(Cloudinary Image CDN)]
+        OpenMeteo[(Open-Meteo Weather API)]
+    end
+
+    Client -->|Session Cookie| AuthHandler
+    Client -->|Base64 Voice| CloudProxy
+    Upload -->|Signed Upload| Cloudinary
+    Client -->|Fetch Weather| OpenMeteo
+    
+    GeminiService -->|Write Records| SupaDB
+    AuthHandler --> SupaDB
+    CloudProxy -->|Synthesize/Transcribe| GeminiService
+    
+    GeminiService -->|Trigger Alerts| RealtimeDB
+    RealtimeDB -.->|Real-time Sync| Client
+```
+
+---
+
+## 🔄 Application Flow
+
+```mermaid
+flowchart TD
+    Start([Farmer Logs In]) --> Choice{Select Action}
+    
+    Choice -->|Disease Check| UploadImage[Upload Crop Image / Record Voice]
+    UploadImage --> AIAnalyze[AI Disease Diagnosis & Confidence Check]
+    AIAnalyze --> ConfCheck{Confidence < 60%?}
+    ConfCheck -->|Yes| Escalate[Escalate: Create Case for Expert Review]
+    ConfCheck -->|No| ShowFarmer[Show Diagnosis & AI Treatment Advice]
+    Escalate --> ShowFarmer
+    
+    Choice -->|Crop Recommendation| InputSoil[Select Soil Type & District]
+    InputSoil --> GetWeather[Fetch Live 7-Day Weather Forecast]
+    GetWeather --> CropLookup[Filter Viable Crops by Soil & Season]
+    CropLookup --> GeminiRec[Gemini AI Recommendation & Alternatives]
+    GeminiRec --> ShowRec[Display Ranked Suitability & Fertilizer Recipe]
+```
+
+---
+
+## 🧠 AI Pipeline
+
+```mermaid
+graph LR
+    Input[Crop Image / Soil Type / District Coordinates] --> WeatherProxy[Fetch Weather Variables]
+    WeatherProxy --> Context[Agronomic Constraint Compiler]
+    Context --> GeminiModel[Gemini AI Reasoning Engine]
+    GeminiModel --> StructuredJSON[Extract JSON Payload]
+    StructuredJSON --> TransAPI[Google Cloud Translation API]
+    TransAPI --> RenderUI[Dynamic UI Render & TTS Read-out]
+```
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technologies Used |
+| :--- | :--- |
+| **Frontend Framework** | Next.js 16 (App Router), React 19, TypeScript |
+| **Styling** | Tailwind CSS v4, Framer Motion (micro-animations) |
+| **Database & Auth** | Supabase PostgreSQL, Row-Level Security (RLS) |
+| **AI / Machine Learning** | Google Gemini (Gemini-3.1-Flash-Lite & Gemini-2.5-Flash) |
+| **External APIs** | Open-Meteo API, Cloudinary (Direct Signed Uploads) |
+| **Cognitive Services** | Google Cloud Translation v2, Speech-to-Text v1, Text-to-Speech v1 |
+| **Notifications** | Firebase Realtime Database (REST API Integration) |
+
+---
+
+## 📁 Folder Structure
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-GEMINI_API_KEY=...
+├── app/
+│   ├── (auth)/                # Signup & Login routes
+│   ├── api/                   # Serverless route handlers
+│   │   ├── cases/             # Expert consultation case fetching & resolution
+│   │   ├── dashboard/         # Aggregated weather & recommendation loader
+│   │   ├── disease-checks/    # Gemini Vision analysis pipeline
+│   │   ├── recommendations/   # Gemini Advisory & seasonal evaluation engine
+│   │   ├── stt/               # Google Cloud Speech-to-Text proxy
+│   │   ├── translate/         # Google Cloud Translation proxy
+│   │   ├── tts/               # Google Cloud Text-to-Speech proxy
+│   │   └── upload-signature/  # Signed short-lived Cloudinary signature
+│   ├── dashboard/             # Farmer home view
+│   ├── disease-check/         # Upload & AI analysis portal
+│   ├── expert/                # Expert case portal & resolution workspace
+│   ├── history/               # Combined historical feed timeline
+│   └── recommendation/        # Dynamic crop recommendation form & wizard
+├── components/                # Reusable UI components & layouts
+├── contexts/                  # Language and Global states
+├── hooks/                     # Custom React hooks
+├── lib/                       # Services, constants, and database utilities
+└── supabase/                  # Database migration schema
 ```
 
-2. Apply the database schema:
+---
 
+## 🔌 API Documentation
+
+| Method | Endpoint | Authentication | Purpose |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/dashboard` | Required (Farmer) | Returns weather summary, dry-spell status, and latest recommendation. |
+| `POST` | `/api/recommendations` | Required (Farmer) | Generates context-aware crop recommendation using weather and soil. |
+| `POST` | `/api/disease-checks` | Required (Farmer) | Analyzes crop image or voice description via Gemini Vision. |
+| `GET` | `/api/cases` | Required (Expert) | Fetches list of escalated cases pending expert evaluation. |
+| `PATCH` | `/api/cases/[id]` | Required (Expert) | Updates case status, notes, and pushes real-time notification to farmer. |
+| `GET` | `/api/upload-signature` | Required (Farmer) | Generates signed token for secure direct-to-Cloudinary upload. |
+| `POST` | `/api/translate` | Required (User) | Translates English advisories into target languages. |
+| `POST` | `/api/stt` | Required (User) | Transcribes Base64 WEBM/Opus audio to text. |
+| `POST` | `/api/tts` | Required (User) | Synthesizes text to Base64 MP3 audio content. |
+
+---
+
+## 🗄️ Database Schema
+
+```mermaid
+erDiagram
+    DISTRICTS ||--o{ USERS : "resides in"
+    USERS ||--o{ RECOMMENDATIONS : "requests"
+    USERS ||--o{ DISEASE_CHECKS : "submits"
+    DISEASE_CHECKS ||--o| CASES : "escalated as"
+
+    DISTRICTS {
+        uuid id PK
+        text name
+        text state
+        float latitude
+        float longitude
+    }
+
+    USERS {
+        uuid id PK
+        text name
+        text role
+        uuid district_id FK
+        text soil_type
+        timestamptz created_at
+    }
+
+    RECOMMENDATIONS {
+        uuid id PK
+        uuid user_id FK
+        text crop_name
+        text reasoning
+        float confidence_score
+        timestamptz created_at
+    }
+
+    DISEASE_CHECKS {
+        uuid id PK
+        uuid user_id FK
+        text image_url
+        text diagnosis
+        float confidence_score
+        text treatment_advice
+        timestamptz created_at
+    }
+
+    CASES {
+        uuid id PK
+        uuid disease_check_id FK
+        text status
+        text expert_notes
+        timestamptz resolved_at
+        timestamptz created_at
+    }
+```
+
+---
+
+## 🔒 Security & Verification
+
+* **Authenticated Service Proxies:** Critical cloud API endpoints (`/api/stt`, `/api/tts`, `/api/translate`) are protected behind user session checks using Supabase Server-side authentication to prevent quota abuse.
+* **Row-Level Security (RLS):** Enabled on all Supabase tables. Farmers can only read and insert their own crop logs, and write access is restricted.
+* **Expert Boundary Protection:** Expert routes (`/api/cases`) perform backend role verification. If the authenticated session's user role is not explicitly `'expert'`, the request is immediately rejected.
+* **Cloudinary Upload Signature Validation:** Rather than accepting arbitrary image URLs in `/api/disease-checks`, the backend explicitly validates the Cloudinary cloud name and hostname, rejecting unsafe path traversals or malicious URLs.
+* **Sanitized Logs:** Production console logs are sanitised and guarded behind the `isDev` flag to protect user privacy (PII) in log streams.
+
+---
+
+## 🚀 Performance Optimizations
+
+> [!TIP]
+> **How we keep the application fast and reliable:**
+> * **Client-Side Image Pre-compression:** Images are scaled (max 1280px edge) and compressed to JPEG format directly on the device using HTML5 Canvas APIs *before* transmission, reducing bandwidth overhead.
+> * **Concurrent API Requests:** Fetches current weather forecasts, user history, and Gemini outputs in parallel using `Promise.all` handlers on Route Handlers.
+> * **Static and Dynamic Segmentation:** Prerenders landing pages statically while dynamically serving dashboard interfaces to ensure immediate load times.
+
+---
+
+## 🌐 Accessibility
+
+* **Local Languages:** 100% translation support across English, Hindi, Marathi, Gujarati, Kannada, Tamil, Telugu, and Bengali.
+* **Voice Assistance:** TTS (Text-to-Speech) capabilities read treatment steps, recovery times, and recommendations aloud, which is critical for hands-busy or low-literacy farmers.
+* **Mobile-First Responsive Interface:** Swaps fluidly from a side-by-side split screen on desktop to a single-column layout on mobile, keeping buttons easily clickable.
+
+---
+
+## 📥 Installation & Setup
+
+### Prerequisites
+* [Node.js](https://nodejs.org/) v18 or later
+* A [Supabase](https://supabase.com/) project (PostgreSQL database)
+* A [Google Cloud Console](https://console.cloud.google.com/) account with Cloud Speech, Cloud Text-to-Speech, and Translation APIs enabled
+* A Google AI Studio API key (for Gemini)
+* A [Cloudinary](https://cloudinary.com/) account for image uploads
+
+### 1. Environment Setup
+Clone the repository and copy the environment template:
 ```bash
-# In the Supabase SQL Editor, run:
+cp .env.example .env.local
+```
+Fill in the keys in `.env.local`:
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+GEMINI_API_KEY=your-gemini-key
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your-cloud-name
+GOOGLE_CLOUD_API_KEY=your-google-cloud-api-key
+NEXT_PUBLIC_FIREBASE_API_KEY=your-firebase-key
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-firebase-project-id
+NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your-database.firebaseio.com
+```
+
+### 2. Database Schema
+Execute the schema script in the **Supabase SQL Editor** to construct the tables, check constraints, and set up Row-Level Security (RLS) policies:
+```sql
+-- Paste and run the contents of:
 supabase/schema.sql
 ```
 
-3. Run the dev server:
-
+### 3. Local Development
+Install dependencies and run the development server:
 ```bash
+npm install
 npm run dev
 ```
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-Open [http://localhost:3000](http://localhost:3000) — you will be redirected to `/login`.
+---
 
-## Key Files
+## 👥 Meet the Team
 
-```
-app/
-  api/recommendations/route.ts  # POST /api/recommendations
-  recommendation/page.tsx       # Main crop advisory UI
-  (auth)/login/page.tsx         # Auth (sign in + sign up)
-lib/
-  cropLookup.ts                 # Soil x Season => viable crops
-  gemini.ts                     # Gemini AI wrapper (never throws)
-  supabase.ts                   # Browser client
-  supabaseServer.ts             # Server client (Route Handlers)
-  constants.ts                  # SOIL_TYPES shared constant
-supabase/
-  schema.sql                    # Full DB schema + RLS policies
-```
+### 👨‍💻 Brijesh Makwana — Project Lead
+* **Responsibilities:** Full Stack Next.js Development, Gemini AI & Vision integration, Supabase Database design, Expert Workspace features, Production deployment, and Project management.
 
-## Recommendation Flow
-
-```
-POST /api/recommendations
-  ├── Validate soil_type + district_id
-  ├── Authenticate via Supabase session cookie
-  ├── Look up district coordinates from DB
-  ├── Fetch Open-Meteo 7-day forecast
-  ├── Derive season (kharif / rabi / summer)
-  ├── getViableCrops(soil, season) → candidate list
-  ├── Ask Gemini to pick best crop + reasoning
-  ├── Persist to recommendations table (best-effort)
-  └── Return { crop_name, reasoning, confidence_score, is_dry_spell }
-```
-
-## Testing Recommendations Locally
-
-We have provided a dedicated development-only endpoint to easily test crop recommendations without needing to sign in, provide a session cookie, or build a complex request body.
-
-### Test Endpoint (Development Only)
-
-Use the following PowerShell command to test recommendation generation:
-
-```powershell
-Invoke-RestMethod `
--Uri "http://localhost:3000/api/recommendations/test" `
--Method POST
-```
-
-**Why this route exists:**
-- Eliminates local manual lookup of valid database UUIDs (`district_id`) or soil IDs (`soil_type`).
-- Automatically falls back to the first available district in the database and the first valid soil type from `SOIL_TYPES`.
-- Generates recommendations using a mock/temporary developer user ID `00000000-0000-0000-0000-000000000000` to bypass authentication barriers in local environments.
-
-**Security & Environment Check:**
-- This route is blocked in production by returning a `405 Method Not Allowed` error if `process.env.NODE_ENV !== "development"`.
-- Production authentication is fully preserved on `/api/recommendations`.
-
-## Commands
-
-```bash
-npm run dev     # development server
-npm run build   # production build
-npm run lint    # ESLint
-npx tsc --noEmit  # TypeScript check
-```
+### 👨‍💻 Gaurav Sharma — Full Stack Developer
+* **Responsibilities:** Frontend Development, API Integration (Open-Meteo & Google Cloud Proxies), Feature implementation, testing, QA, and UI/UX optimization.

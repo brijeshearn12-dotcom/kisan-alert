@@ -1,60 +1,27 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useAudio } from '@/contexts/AudioContext'
 
 interface ListenButtonProps {
   text: string
   languageCode: string
+  id?: string
 }
 
-export function ListenButton({ text, languageCode }: ListenButtonProps) {
+export function ListenButton({ text, languageCode, id }: ListenButtonProps) {
   const { t } = useLanguage()
-  const [playing, setPlaying] = useState(false)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const { currentId, isPlaying, isLoading, play, stop } = useAudio()
 
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause()
-      }
-    }
-  }, [])
+  const buttonId = id || text
+  const isThisPlaying = currentId === buttonId && isPlaying
+  const isThisLoading = currentId === buttonId && isLoading
 
-  async function handlePlay() {
-    if (playing) {
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current.currentTime = 0
-      }
-      setPlaying(false)
-      return
-    }
-
-    setPlaying(true)
-    try {
-      const response = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, languageCode }),
-      })
-      const { audioContent } = await response.json()
-      if (audioContent) {
-        const audioObj = new Audio(`data:audio/mp3;base64,${audioContent}`)
-        audioRef.current = audioObj
-        audioObj.play().catch((err) => {
-          console.error('Audio playback failed:', err)
-          setPlaying(false)
-        })
-        audioObj.onended = () => {
-          setPlaying(false)
-        }
-      } else {
-        setPlaying(false)
-      }
-    } catch (err) {
-      console.error('TTS failed:', err)
-      setPlaying(false)
+  function handlePlay() {
+    if (isThisPlaying || isThisLoading) {
+      stop()
+    } else {
+      play(buttonId, text, languageCode)
     }
   }
 
@@ -62,11 +29,20 @@ export function ListenButton({ text, languageCode }: ListenButtonProps) {
     <button
       type="button"
       onClick={handlePlay}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 mt-2 min-h-[44px]"
+      disabled={isThisLoading}
+      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-green/40 mt-2 min-h-[44px] disabled:opacity-70"
     >
-      {playing ? (
+      {isThisLoading ? (
         <>
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-rose-500">
+          <svg className="animate-spin -ml-1 mr-1 h-3.5 w-3.5 text-slate-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>{t('voice.listening') || 'Loading…'}</span>
+        </>
+      ) : isThisPlaying ? (
+        <>
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-rose-500 animate-pulse">
             <rect x="4" y="4" width="16" height="16" rx="2" />
           </svg>
           <span>{t('voice.stop')}</span>
@@ -84,3 +60,4 @@ export function ListenButton({ text, languageCode }: ListenButtonProps) {
     </button>
   )
 }
+

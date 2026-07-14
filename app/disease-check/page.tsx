@@ -769,9 +769,34 @@ export default function DiseaseCheckPage() {
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
                         {screenState === 'escalated' || diagnosisResult.escalated ? t('disease.suspectedDisease') : t('disease.label')}
                       </span>
-                      <h2 className="text-xl font-bold text-slate-900 mt-1 leading-tight">
-                        {diagnosisResult.diagnosis}
-                      </h2>
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        <h2 className="text-xl font-bold text-slate-900 leading-tight">
+                          {diagnosisResult.diagnosis}
+                        </h2>
+                        {diagnosisResult.diagnosis && (
+                          <div className="ml-2 shrink-0">
+                            <ListenButton
+                              id="disease-diagnosis-block"
+                              text={(() => {
+                                const parts = [
+                                  `${screenState === 'escalated' || diagnosisResult.escalated ? t('disease.suspectedDisease') : t('disease.label')}: ${diagnosisResult.diagnosis}`
+                                ]
+                                if (diagnosisResult.confidence_score !== undefined) {
+                                  parts.push(`${t('disease.confidencePercent', { percent: (diagnosisResult.confidence_score * 100).toFixed(0) })}`)
+                                }
+                                if (diagnosisResult.severity) {
+                                  parts.push(`${t(`disease.severity.${diagnosisResult.severity.toLowerCase()}` as TranslationKey)} Severity`)
+                                }
+                                if (diagnosisResult.spread_risk) {
+                                  parts.push(`${t(`disease.spreadRisk.${diagnosisResult.spread_risk.toLowerCase()}` as TranslationKey)}: ${t(`disease.spreadRisk.${diagnosisResult.spread_risk.toLowerCase()}.desc` as TranslationKey)}`)
+                                }
+                                return parts.join('. ')
+                              })()}
+                              languageCode={toSpeechLocale(language)}
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
@@ -830,16 +855,25 @@ export default function DiseaseCheckPage() {
 
                   {/* Immediate Action Card */}
                   {diagnosisResult.immediate_action && (
-                    <div className="mt-5 rounded-2xl border-l-4 border-rose-500 bg-rose-50/50 p-5 shadow-sm">
-                      <div className="flex items-center gap-2 text-rose-800">
-                        <span aria-hidden="true" className="text-sm">🚨</span>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-rose-600">
-                          {t('disease.immediateAction') || 'CRITICAL IMMEDIATE ACTION'}
-                        </h4>
+                    <div className="mt-5 rounded-2xl border-l-4 border-rose-500 bg-rose-50/50 p-5 shadow-sm flex flex-col gap-3">
+                      <div>
+                        <div className="flex items-center gap-2 text-rose-800">
+                          <span aria-hidden="true" className="text-sm">🚨</span>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-rose-600">
+                            {t('disease.immediateAction') || 'CRITICAL IMMEDIATE ACTION'}
+                          </h4>
+                        </div>
+                        <p className="mt-2.5 text-sm font-semibold text-rose-950 leading-relaxed">
+                          {diagnosisResult.immediate_action}
+                        </p>
                       </div>
-                      <p className="mt-2.5 text-sm font-semibold text-rose-950 leading-relaxed">
-                        {diagnosisResult.immediate_action}
-                      </p>
+                      <div className="self-start">
+                        <ListenButton
+                          id="disease-immediate-action"
+                          text={`${t('disease.immediateAction') || 'CRITICAL IMMEDIATE ACTION'}. ${diagnosisResult.immediate_action}`}
+                          languageCode={toSpeechLocale(language)}
+                        />
+                      </div>
                     </div>
                   )}
 
@@ -852,61 +886,97 @@ export default function DiseaseCheckPage() {
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       {/* Organic Treatment Card */}
                       {diagnosisResult.organic_treatment && (
-                        <div className="rounded-xl border border-emerald-100 bg-emerald-50/[0.05] p-4 transition-all hover:shadow-sm">
-                          <div className="flex items-center gap-2 mb-2">
-                            {OrganicIcon}
-                            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                              {t('disease.treatment.organic')}
-                            </h4>
+                        <div className="rounded-xl border border-emerald-100 bg-emerald-50/[0.05] p-4 transition-all hover:shadow-sm flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              {OrganicIcon}
+                              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                                {t('disease.treatment.organic')}
+                              </h4>
+                            </div>
+                            <p className="text-sm text-slate-600 leading-relaxed">
+                              {diagnosisResult.organic_treatment}
+                            </p>
                           </div>
-                          <p className="text-sm text-slate-600 leading-relaxed">
-                            {diagnosisResult.organic_treatment}
-                          </p>
+                          <div className="mt-3 self-start">
+                            <ListenButton
+                              id="disease-organic-treatment"
+                              text={`${t('disease.treatment.organic')}. ${diagnosisResult.organic_treatment}`}
+                              languageCode={toSpeechLocale(language)}
+                            />
+                          </div>
                         </div>
                       )}
 
                       {/* Chemical Treatment Card */}
                       {diagnosisResult.chemical_treatment && (
-                        <div className="rounded-xl border border-blue-100 bg-blue-50/[0.05] p-4 transition-all hover:shadow-sm">
-                          <div className="flex items-center gap-2 mb-2">
-                            {ChemicalIcon}
-                            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                              {t('disease.treatment.chemical')}
-                            </h4>
+                        <div className="rounded-xl border border-blue-100 bg-blue-50/[0.05] p-4 transition-all hover:shadow-sm flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              {ChemicalIcon}
+                              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                                {t('disease.treatment.chemical')}
+                              </h4>
+                            </div>
+                            <p className="text-sm text-slate-600 leading-relaxed">
+                              {diagnosisResult.chemical_treatment}
+                            </p>
                           </div>
-                          <p className="text-sm text-slate-600 leading-relaxed">
-                            {diagnosisResult.chemical_treatment}
-                          </p>
+                          <div className="mt-3 self-start">
+                            <ListenButton
+                              id="disease-chemical-treatment"
+                              text={`${t('disease.treatment.chemical')}. ${diagnosisResult.chemical_treatment}`}
+                              languageCode={toSpeechLocale(language)}
+                            />
+                          </div>
                         </div>
                       )}
 
                       {/* Prevention Card */}
                       {diagnosisResult.prevention && (
-                        <div className="rounded-xl border border-indigo-100 bg-indigo-50/[0.05] p-4 transition-all hover:shadow-sm">
-                          <div className="flex items-center gap-2 mb-2">
-                            {PreventionIcon}
-                            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                              {t('disease.treatment.prevention')}
-                            </h4>
+                        <div className="rounded-xl border border-indigo-100 bg-indigo-50/[0.05] p-4 transition-all hover:shadow-sm flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              {PreventionIcon}
+                              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                                {t('disease.treatment.prevention')}
+                              </h4>
+                            </div>
+                            <p className="text-sm text-slate-600 leading-relaxed">
+                              {diagnosisResult.prevention}
+                            </p>
                           </div>
-                          <p className="text-sm text-slate-600 leading-relaxed">
-                            {diagnosisResult.prevention}
-                          </p>
+                          <div className="mt-3 self-start">
+                            <ListenButton
+                              id="disease-prevention"
+                              text={`${t('disease.treatment.prevention')}. ${diagnosisResult.prevention}`}
+                              languageCode={toSpeechLocale(language)}
+                            />
+                          </div>
                         </div>
                       )}
 
                       {/* Monitoring Card */}
                       {diagnosisResult.monitoring && (
-                        <div className="rounded-xl border border-amber-100 bg-amber-50/[0.05] p-4 transition-all hover:shadow-sm">
-                          <div className="flex items-center gap-2 mb-2">
-                            {MonitoringIcon}
-                            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                              {t('disease.treatment.monitoring')}
-                            </h4>
+                        <div className="rounded-xl border border-amber-100 bg-amber-50/[0.05] p-4 transition-all hover:shadow-sm flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              {MonitoringIcon}
+                              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                                {t('disease.treatment.monitoring')}
+                              </h4>
+                            </div>
+                            <p className="text-sm text-slate-600 leading-relaxed">
+                              {diagnosisResult.monitoring}
+                            </p>
                           </div>
-                          <p className="text-sm text-slate-600 leading-relaxed">
-                            {diagnosisResult.monitoring}
-                          </p>
+                          <div className="mt-3 self-start">
+                            <ListenButton
+                              id="disease-monitoring"
+                              text={`${t('disease.treatment.monitoring')}. ${diagnosisResult.monitoring}`}
+                              languageCode={toSpeechLocale(language)}
+                            />
+                          </div>
                         </div>
                       )}
                     </div>
@@ -918,24 +988,8 @@ export default function DiseaseCheckPage() {
                         </p>
                         <div className="shrink-0">
                           <ListenButton
-                            text={(() => {
-                              const parts = [
-                                diagnosisResult.treatment_advice
-                              ]
-                              if (diagnosisResult.organic_treatment) {
-                                parts.push(`${t('disease.treatment.organic')}: ${diagnosisResult.organic_treatment}`)
-                              }
-                              if (diagnosisResult.chemical_treatment) {
-                                parts.push(`${t('disease.treatment.chemical')}: ${diagnosisResult.chemical_treatment}`)
-                              }
-                              if (diagnosisResult.prevention) {
-                                parts.push(`${t('disease.treatment.prevention')}: ${diagnosisResult.prevention}`)
-                              }
-                              if (diagnosisResult.monitoring) {
-                                parts.push(`${t('disease.treatment.monitoring')}: ${diagnosisResult.monitoring}`)
-                              }
-                              return parts.join('. ')
-                            })()}
+                            id="disease-treatment-advice"
+                            text={diagnosisResult.treatment_advice}
                             languageCode={toSpeechLocale(language)}
                           />
                         </div>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { AudioProvider } from "@/contexts/AudioContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
 
 const geistSans = Geist({
@@ -31,15 +32,18 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <LanguageProvider>
-          {children}
-          {/* One global language switcher for the whole app. Floats above every
-              page's own top bar (bottom-right) so it never collides with them
-              and is always reachable. */}
-          <div className="fixed bottom-5 right-5 z-50 sm:bottom-6 sm:right-6">
-            <LanguageSelector placement="up" />
-          </div>
+          <AudioProvider>
+            {children}
+            {/* One global language switcher for the whole app. Floats above every
+                page's own top bar (bottom-right) so it never collides with them
+                and is always reachable. */}
+            <div className="fixed bottom-5 right-5 z-50 sm:bottom-6 sm:right-6">
+              <LanguageSelector placement="up" />
+            </div>
+          </AudioProvider>
         </LanguageProvider>
       </body>
     </html>
   );
 }
+

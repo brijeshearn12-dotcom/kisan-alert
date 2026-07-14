@@ -1145,14 +1145,14 @@ const HeroRecommendationCard = forwardRef<
       if (language === 'te') {
         return [
           `మీ ${soilLabel} నేల రకానికి ఉత్తమ సరిపోలిక`,
-          `ప్రస్తుత వాతావరణంలో అత్యధిక పర్యావరణ అనుకూలత (${suitability}%)`,
+          `ప్రస్తుత వాతావరణంలో అత్యధిక పర్యావరణ అనుకూత (${suitability}%)`,
           `అత్యల్ప మొత్తం సాగు ప్రమాదం (${riskLabel} ప్రమాదం)`
         ]
       }
       if (language === 'bn') {
         return [
           `আপনার ${soilLabel} মাটির জন্য সবচেয়ে উপযুক্ত`,
-          `বর্তমান আবহাওয়ায় সর্বোচ্চ পরিবেশগত উপযুক্ততা (${suitability}%)`,
+          `বর্তমান আবহাওয়ায় সর্বোচ্চ পরিবেশগত उपयुक्तতা (${suitability}%)`,
           `সর্বনিম্ন সামগ্রিক চাষের ঝুঁকি (${riskLabel} ঝুঁকি)`
         ]
       }
@@ -1170,70 +1170,92 @@ const HeroRecommendationCard = forwardRef<
           ref={ref}
           aria-live="polite"
           aria-label="Best Choice crop recommendation"
-          className="mt-8 overflow-hidden rounded-2xl border-2 border-emerald-500 bg-white shadow-md ring-1 ring-emerald-500/5"
+          className="mt-8 overflow-hidden rounded-2xl border-2 border-emerald-500 bg-white shadow-md ring-1 ring-emerald-500/5 flex flex-col justify-between"
         >
-          {/* Banner header */}
-          <div className="bg-emerald-500 px-5 py-2.5 sm:px-6 text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
-            <span>{pt('rec.bestChoice')}</span>
-          </div>
+          <div>
+            {/* Banner header */}
+            <div className="bg-emerald-500 px-5 py-2.5 sm:px-6 text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+              <span>{pt('rec.bestChoice')}</span>
+            </div>
 
-          <div className="p-5 sm:p-6">
-            {/* Crop name & suitability score badge */}
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                  {t(getCropTranslationKey(result.bestCrop.cropName))}
-                </h2>
+            <div className="p-5 sm:p-6">
+              {/* Crop name & suitability score badge */}
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                    {t(getCropTranslationKey(result.bestCrop.cropName))}
+                  </h2>
+                </div>
+                <span
+                  className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${suitColor.bg}`}
+                >
+                  {suitability}% {pt('rec.suitable')}
+                </span>
               </div>
-              <span
-                className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${suitColor.bg}`}
-              >
-                {suitability}% {pt('rec.suitable')}
-              </span>
-            </div>
 
-            {/* Badges row for Profit and Risk */}
-            <div className="mt-3.5 flex flex-wrap gap-2">
-              <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${profitColor}`}>
-                💸 {pt('rec.profitPotential')}: {pt(`rec.${profit.toLowerCase()}`)}
-              </span>
-              <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${riskColor}`}>
-                ⚠️ {pt('rec.riskLevel')}: {pt(`rec.${risk.toLowerCase()}`)}
-              </span>
-            </div>
+              {/* Badges row for Profit and Risk */}
+              <div className="mt-3.5 flex flex-wrap gap-2">
+                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${profitColor}`}>
+                  💸 {pt('rec.profitPotential')}: {pt(`rec.${profit.toLowerCase()}`)}
+                </span>
+                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${riskColor}`}>
+                  ⚠️ {pt('rec.riskLevel')}: {pt(`rec.${risk.toLowerCase()}`)}
+                </span>
+              </div>
 
-            {/* Bulleted checklist of key reasons */}
-            <div className="mt-5 border-t border-slate-100 pt-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                {pt('rec.reasons')}
-              </h3>
-              <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                {result.bestCrop.primaryReasons.map((reason, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <span className="text-emerald-500 font-bold text-base leading-none">✔</span>
-                    <span>{reason}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+              {/* Listen button for Recommended Crop */}
+              <div className="mt-3">
+                <ListenButton
+                  id="rec-best-crop"
+                  text={(() => {
+                    const parts = [
+                      `${pt('rec.bestChoice')}: ${t(getCropTranslationKey(result.bestCrop.cropName))}`,
+                      `${pt('rec.suitable')}: ${suitability}%`,
+                      `${pt('rec.profitPotential')}: ${pt(`rec.${profit.toLowerCase()}`)}`,
+                      `${pt('rec.riskLevel')}: ${pt(`rec.${risk.toLowerCase()}`)}`,
+                      `${pt('rec.reasons')}: ${result.bestCrop.primaryReasons.join('. ')}`,
+                      result.bestCrop.summary,
+                      `${pt('rec.whyBestChoice')}: ${getWhyBestChoiceBullets().join('. ')}`
+                    ]
+                    return parts.join('. ')
+                  })()}
+                  languageCode={toSpeechLocale(language)}
+                />
+              </div>
 
-            {/* Concise AI summary */}
-            <div className="mt-4 border-l-2 border-slate-200 pl-3">
-              <p className="text-sm italic leading-relaxed text-slate-500">
-                {result.bestCrop.summary}
-              </p>
-            </div>
+              {/* Bulleted checklist of key reasons */}
+              <div className="mt-5 border-t border-slate-100 pt-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  {pt('rec.reasons')}
+                </h3>
+                <ul className="mt-3 space-y-2 text-sm text-slate-600">
+                  {result.bestCrop.primaryReasons.map((reason, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-emerald-500 font-bold text-base leading-none">✔</span>
+                      <span>{reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-            {/* "Why this is #1" section */}
-            <div className="mt-5 border-t border-slate-100 pt-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                {pt('rec.whyBestChoice')}
-              </h3>
-              <ul className="mt-2.5 space-y-1.5 text-xs text-slate-500 list-disc list-inside">
-                {getWhyBestChoiceBullets().map((bullet, idx) => (
-                  <li key={idx}>{bullet}</li>
-                ))}
-              </ul>
+              {/* Concise AI summary */}
+              <div className="mt-4 border-l-2 border-slate-200 pl-3">
+                <p className="text-sm italic leading-relaxed text-slate-500">
+                  {result.bestCrop.summary}
+                </p>
+              </div>
+
+              {/* "Why this is #1" section */}
+              <div className="mt-5 border-t border-slate-100 pt-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  {pt('rec.whyBestChoice')}
+                </h3>
+                <ul className="mt-2.5 space-y-1.5 text-xs text-slate-500 list-disc list-inside">
+                  {getWhyBestChoiceBullets().map((bullet, idx) => (
+                    <li key={idx}>{bullet}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
 
@@ -1310,6 +1332,15 @@ const LegacyResultCard = forwardRef<
               </span>
             </div>
 
+            {/* Listen button for Recommended Crop */}
+            <div className="mt-3">
+              <ListenButton
+                id="rec-legacy-best-crop"
+                text={`${t('recommendation.result.recommendedCrop')}: ${t(getCropTranslationKey(bestCropName))}. ${t('recommendation.result.confidence')}: ${percent}%. ${t('recommendation.result.whyThisCrop')}: ${displayReasoning}.`}
+                languageCode={toSpeechLocale(language)}
+              />
+            </div>
+
             {/* Confidence bar */}
             <div className="mt-4">
               <div className="flex items-center justify-between mb-1.5">
@@ -1332,10 +1363,6 @@ const LegacyResultCard = forwardRef<
             <div className="mt-5 border-t border-slate-100 pt-5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-400">{t('recommendation.result.whyThisCrop')}</p>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">{displayReasoning}</p>
-              <ListenButton
-                text={displayReasoning}
-                languageCode={toSpeechLocale(language)}
-              />
             </div>
 
             {/* Weather signal */}
@@ -1456,41 +1483,51 @@ function AlternativesCard({
             return (
               <div
                 key={crop.cropName}
-                className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md"
+                className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md flex flex-col justify-between"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h4 className="text-lg font-bold text-slate-800 flex items-center gap-1.5">
-                      <span>{medal}</span>
-                      <span>{t(getCropTranslationKey(crop.cropName))}</span>
-                    </h4>
+                <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h4 className="text-lg font-bold text-slate-800 flex items-center gap-1.5">
+                        <span>{medal}</span>
+                        <span>{t(getCropTranslationKey(crop.cropName))}</span>
+                      </h4>
+                    </div>
+                    <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${suitColor}`}>
+                      {suitability}%
+                    </span>
                   </div>
-                  <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${suitColor}`}>
-                    {suitability}%
-                  </span>
+
+                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ring-1 ring-inset ${profitColor}`}>
+                      {pt(`rec.${profit.toLowerCase()}`)} {pt('rec.profit')}
+                    </span>
+                    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ring-1 ring-inset ${riskColor}`}>
+                      {pt(`rec.${risk.toLowerCase()}`)} {pt('rec.risk')}
+                    </span>
+                  </div>
+
+                  <ul className="mt-3 space-y-1 text-xs text-slate-500">
+                    {crop.primaryReasons.slice(0, 2).map((reason, rIdx) => (
+                      <li key={rIdx} className="flex items-start gap-1">
+                        <span className="text-slate-400 font-bold">•</span>
+                        <span>{reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <p className="mt-2.5 text-xs text-slate-600 leading-relaxed italic border-t border-slate-50 pt-2">
+                    {crop.summary}
+                  </p>
                 </div>
-
-                <div className="mt-2.5 flex flex-wrap gap-1.5">
-                  <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ring-1 ring-inset ${profitColor}`}>
-                    {pt(`rec.${profit.toLowerCase()}`)} {pt('rec.profit')}
-                  </span>
-                  <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ring-1 ring-inset ${riskColor}`}>
-                    {pt(`rec.${risk.toLowerCase()}`)} {pt('rec.risk')}
-                  </span>
+                
+                <div className="mt-3 self-start">
+                  <ListenButton
+                    id={`alternative-${crop.cropName.toLowerCase().replace(/\s+/g, '-')}`}
+                    text={`${pt('rec.alternativeCrops')}: ${t(getCropTranslationKey(crop.cropName))}. ${suitability}%. ${pt(`rec.${profit.toLowerCase()}`)} ${pt('rec.profit')}. ${pt(`rec.${risk.toLowerCase()}`)} ${pt('rec.risk')}. ${crop.summary}`}
+                    languageCode={toSpeechLocale(language)}
+                  />
                 </div>
-
-                <ul className="mt-3 space-y-1 text-xs text-slate-500">
-                  {crop.primaryReasons.slice(0, 2).map((reason, rIdx) => (
-                    <li key={rIdx} className="flex items-start gap-1">
-                      <span className="text-slate-400 font-bold">•</span>
-                      <span>{reason}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <p className="mt-2.5 text-xs text-slate-600 leading-relaxed italic border-t border-slate-50 pt-2">
-                  {crop.summary}
-                </p>
               </div>
             )
           })}
@@ -1523,8 +1560,6 @@ function AdvancedInsightsAccordions({
     return PAGE_TRANSLATIONS[language]?.[key] ?? PAGE_TRANSLATIONS['en']?.[key] ?? key
   }
 
-  const ttsText = `${pt('rec.bestChoice')} ${t(getCropTranslationKey(result.bestCrop.cropName))}. ${pt('rec.suitabilityScore')}: ${result.bestCrop.suitabilityScore} percent. ${result.bestCrop.summary} ${t('recommendation.advisory.irrigationAdvice')}: ${result.bestCrop.irrigation_advice}`
-
   return (
     <EntranceAnimation>
       <div className="mt-8 space-y-4">
@@ -1536,7 +1571,11 @@ function AdvancedInsightsAccordions({
             </p>
             <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-3 bg-slate-50/50 p-3 rounded-xl">
               <span className="text-xs text-slate-400 font-medium">Listen to AI summary</span>
-              <ListenButton text={ttsText} languageCode={toSpeechLocale(language)} />
+              <ListenButton
+                id="rec-detailed-reasoning-summary"
+                text={result.bestCrop.summary}
+                languageCode={toSpeechLocale(language)}
+              />
             </div>
           </div>
         </Accordion>
@@ -1544,41 +1583,68 @@ function AdvancedInsightsAccordions({
         {/* Accordion 2: Weather Analysis */}
         <Accordion title={pt('rec.weatherAnalysis')}>
           {weather ? (
-            <div className="grid grid-cols-2 gap-4 text-xs text-slate-600 sm:grid-cols-3">
-              <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-center">
-                <span className="block text-slate-400 font-medium">{pt('rec.aveTemp')}</span>
-                <span className="mt-1 block text-sm font-semibold text-slate-800">{Math.round(weather.temperature)}°C</span>
+            <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-2 gap-4 text-xs text-slate-600 sm:grid-cols-3">
+                <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-center">
+                  <span className="block text-slate-400 font-medium">{pt('rec.aveTemp')}</span>
+                  <span className="mt-1 block text-sm font-semibold text-slate-800">{Math.round(weather.temperature)}°C</span>
+                </div>
+                <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-center">
+                  <span className="block text-slate-400 font-medium">{pt('rec.expRain')}</span>
+                  <span className="mt-1 block text-sm font-semibold text-slate-800">{weather.rainfall} mm</span>
+                </div>
+                <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-center col-span-2 sm:col-span-1">
+                  <span className="block text-slate-400 font-medium">{pt('rec.drySpell')}</span>
+                  <span className="mt-1 block text-sm font-semibold text-slate-800">
+                    {result.is_dry_spell ? 'Yes ⚠️' : 'No'}
+                  </span>
+                </div>
               </div>
-              <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-center">
-                <span className="block text-slate-400 font-medium">{pt('rec.expRain')}</span>
-                <span className="mt-1 block text-sm font-semibold text-slate-800">{weather.rainfall} mm</span>
-              </div>
-              <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-center col-span-2 sm:col-span-1">
-                <span className="block text-slate-400 font-medium">{pt('rec.drySpell')}</span>
-                <span className="mt-1 block text-sm font-semibold text-slate-800">
-                  {result.is_dry_spell ? 'Yes ⚠️' : 'No'}
-                </span>
+              <div className="self-start mt-2">
+                <ListenButton
+                  id="rec-weather-analysis"
+                  text={`${pt('rec.weatherAnalysis')}. ${pt('rec.aveTemp')}: ${Math.round(weather.temperature)}°C. ${pt('rec.expRain')}: ${weather.rainfall} mm. ${pt('rec.drySpell')}: ${result.is_dry_spell ? 'Yes' : 'No'}.`}
+                  languageCode={toSpeechLocale(language)}
+                />
               </div>
             </div>
           ) : (
-            <p className="text-xs text-slate-400">{t('recommendation.weatherUnavailable')}</p>
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-slate-400">{t('recommendation.weatherUnavailable')}</p>
+              <div className="self-start">
+                <ListenButton
+                  id="rec-weather-analysis-unavailable"
+                  text={t('recommendation.weatherUnavailable')}
+                  languageCode={toSpeechLocale(language)}
+                />
+              </div>
+            </div>
           )}
         </Accordion>
 
         {/* Accordion 3: Environmental Factors */}
         <Accordion title={pt('rec.environmentalFactors')}>
-          <div className="grid grid-cols-2 gap-4 text-xs text-slate-600 sm:grid-cols-3">
-            <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-center">
-              <span className="block text-slate-400 font-medium">{pt('rec.soilType')}</span>
-              <span className="mt-1 block text-sm font-semibold text-slate-800">{t(`soil.${soil}.label` as TranslationKey)}</span>
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-4 text-xs text-slate-600 sm:grid-cols-3">
+              <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-center">
+                <span className="block text-slate-400 font-medium">{pt('rec.soilType')}</span>
+                <span className="mt-1 block text-sm font-semibold text-slate-800">{t(`soil.${soil}.label` as TranslationKey)}</span>
+              </div>
+              <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-center">
+                <span className="block text-slate-400 font-medium">{pt('rec.soilMoisture')}</span>
+                <span className="mt-1 block text-sm font-semibold text-slate-800">{soilMoisture}% ({t(`recommendation.moisture.${moistureLevel.toLowerCase()}` as TranslationKey)})</span>
+              </div>
+              <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-center col-span-2 sm:col-span-1">
+                <span className="block text-slate-400 font-medium">{pt('rec.vegStatus')}</span>
+                <span className="mt-1 block text-sm font-semibold text-slate-800">{t(`veg.status.${computedVegIndex.status.toLowerCase()}` as TranslationKey)}</span>
+              </div>
             </div>
-            <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-center">
-              <span className="block text-slate-400 font-medium">{pt('rec.soilMoisture')}</span>
-              <span className="mt-1 block text-sm font-semibold text-slate-800">{soilMoisture}% ({t(`recommendation.moisture.${moistureLevel.toLowerCase()}` as TranslationKey)})</span>
-            </div>
-            <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-center col-span-2 sm:col-span-1">
-              <span className="block text-slate-400 font-medium">{pt('rec.vegStatus')}</span>
-              <span className="mt-1 block text-sm font-semibold text-slate-800">{t(`veg.status.${computedVegIndex.status.toLowerCase()}` as TranslationKey)}</span>
+            <div className="self-start mt-2">
+              <ListenButton
+                id="rec-environmental-factors"
+                text={`${pt('rec.environmentalFactors')}. ${pt('rec.soilType')}: ${t(`soil.${soil}.label` as TranslationKey)}. ${pt('rec.soilMoisture')}: ${soilMoisture}% (${t(`recommendation.moisture.${moistureLevel.toLowerCase()}` as TranslationKey)}). ${pt('rec.vegStatus')}: ${t(`veg.status.${computedVegIndex.status.toLowerCase()}` as TranslationKey)}.`}
+                languageCode={toSpeechLocale(language)}
+              />
             </div>
           </div>
         </Accordion>
@@ -1624,21 +1690,29 @@ function AdvisoryCard({
 }) {
   const { t } = useLanguage()
   return (
-    <section className="rounded-2xl border border-primary-green/15 bg-primary-green/5 p-5 shadow-sm sm:p-6">
-      <div className="flex items-center gap-2.5">
-        <span
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-green/10 text-base"
-          aria-hidden="true"
-        >
-          {emoji}
-        </span>
-        <h3 className="text-[11px] font-semibold uppercase tracking-[0.09em] text-primary-green">
-          {title}
-        </h3>
+    <section className="rounded-2xl border border-primary-green/15 bg-primary-green/5 p-5 shadow-sm sm:p-6 flex flex-col justify-between">
+      <div>
+        <div className="flex items-center gap-2.5">
+          <span
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-green/10 text-base"
+            aria-hidden="true"
+          >
+            {emoji}
+          </span>
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.09em] text-primary-green">
+            {title}
+          </h3>
+        </div>
+        <p className="mt-3 text-sm leading-relaxed text-slate-600">{body}</p>
       </div>
-      <p className="mt-3 text-sm leading-relaxed text-slate-600">{body}</p>
       {body !== t('recommendation.advisory.unavailable') && (
-        <ListenButton text={body} languageCode={languageCode} />
+        <div className="mt-3 self-start">
+          <ListenButton
+            id={`advisory-${title.toLowerCase().replace(/\s+/g, '-')}`}
+            text={`${title}. ${body}`}
+            languageCode={languageCode}
+          />
+        </div>
       )}
     </section>
   )
